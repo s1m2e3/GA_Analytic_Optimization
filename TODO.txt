@@ -1,0 +1,13 @@
+#Paper Writing
+	#Format constraints in latex	(Sam)
+	#Share latex online		(Sam)
+	#Determine good conferences/journals
+	#Lit review of crossover methods
+
+#Poster Presentation
+	#Make diagram of global loop
+
+#Experiments
+	#Make interface between outer loop and crossover code (Kyle)
+	#Modify start/finish squares. (Kyle)
+	#Review constraints concerning directional edges (Sam)
