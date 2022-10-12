@@ -73,13 +73,14 @@ if __name__== "__main__":
 
     #Generate a random number of states and learners
     n_states=np.random.randint(low=20,high=25)
-    n_learners=np.random.randint(low=2,high=n_states//3)
+    #n_learners=np.random.randint(low=2,high=n_states//3)
+    n_learners=np.random.randint(low=2,high=3)
     
     #Create assumed learned info (Unecessary once replaced.
     learned_info=create_sols(n_states,n_learners)
-    print("Learned info")
-    for learner in learned_info:
-        print(learner)
+    #print("Learned info")
+    #for learner in learned_info:
+        #print(learner)
     
     #Start timer
     now = datetime.now().time()
@@ -89,14 +90,16 @@ if __name__== "__main__":
         print("value found by learner "+str(learner), sum(list(learned_info[learner]['state-reward'].values())))
     
     #Apply the crossover to the dictionary of agents.
-    print("Learned info")
-    print(learned_info[0])
+    #print("Learned info")
+    #print(learned_info[0])
     crossover=smart_crossover.Smart_Crossover(learned_info)
     
     #End timer
     after = datetime.now().time()
     
     print("time without plots")
+    print("Source state", crossover.source_state)
+    print("Sink state", crossover.sink_state)
     print("number of states: ",n_states)
     print("n_iter:",crossover.n_iter)
     print("solution:",crossover.solution)

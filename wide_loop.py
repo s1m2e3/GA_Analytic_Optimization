@@ -304,6 +304,7 @@ if __name__== "__main__":
                     for j, model in enumerate([parent_1, parent_2]):
                         learned_info[j] = {}
                         learned_info[j]['state-reward'] = {}
+                        learned_info[j]['known_states'] = []
                         learned_info[j]['not_known'] = []
                         learned_info[j]['edges_exist'] = []
                         
@@ -313,10 +314,21 @@ if __name__== "__main__":
                             if model['known_rewards'][k] != -1:
                                 learned_info[j]['state-reward'][k] = model['known_rewards'][k]
                         
+                        #Get known states from state reward
+                        learned_info[j]['known_states'] = list(learned_info[j]['state-reward'].keys())
                         edges_exist = []
                         
-                        #print("Known transitions")
-                        #print(model['known_transitions'])
+                        '''
+                        print("Known transitions")
+                        print(model['known_transitions'])
+                        print('not knowns')
+                        print(model['known_transitions'])
+                        print()
+                        print(model['known_not_transitions'])
+                        print()
+                        print(learned_info[j]['known_states'])
+                        '''
+                        
                         
                         for k in range(len(model['known_transitions'][0])):
                             for m in range(len(model['known_transitions'][1])):
@@ -324,9 +336,13 @@ if __name__== "__main__":
                                 if model['known_transitions'][k][m] == 1:
                                     learned_info[j]['edges_exist'].append((k,m))
                                 
-                                #If not known to exist, but can't be ruled out, add to not_knowns
+                                #If not known to exist, but can't be ruled out, add to not_knowns (Note, only between known states currently)
+
                                 if model['known_transitions'][k][m] != 1 and model['known_not_transitions'][k][m] != 1:
-                                    learned_info[j]['not_known'].append((k,m))
+                                    if k in learned_info[j]['known_states'] and m in learned_info[j]['known_states']:
+                                        learned_info[j]['not_known'].append((k,m))
+                                        
+                                        
                     
                     #print("Learned info")
                     #print(learned_info[0])
@@ -335,16 +351,21 @@ if __name__== "__main__":
                     #break
                     
                     #Check crossover code for direct inserting known edges.
-                    start = datetime.now().time()
+                    start = datetime.now()
                     #edges_exist
                     #player_location
                     #goal_location
+                    
                     crossover=smart_crossover.Smart_Crossover(learned_info)
-                    print("Solution time: ", datetime.now().time() - start)
+                    
+                    print("Source state", crossover.source_state)
+                    print("Sink state", crossover.sink_state)
+                    
+                    print("Solution time: ", datetime.now() - start)
                     
                     #Crossover stats
                     print("time without plots")
-                    print("number of states: ",n_states)
+                    #print("number of states: ",n_states)
                     print("n_iter:",crossover.n_iter)
                     print("solution:",crossover.solution)
                     print("value:",crossover.value)

@@ -20,17 +20,15 @@ class Smart_Crossover:
         #Generate the ensemble.
         self.ensemble = self.ensemble_learned_info()
         
-        #print("Ensembled learned info")
+        print("Ensembled learned info")
         #NOTE: Ensemble unlearned will blow up.
-        #print(self.ensemble)
+        print(self.ensemble)
         #Graph it
         self.graph = nx.DiGraph()
         
         #Prepare
         rew_matrix,source_state,sink_state = self.prep()
         
-        #Check that everything is there:
-        print("Index of source and sink", source_state, "", sink_state)
         
         self.solution=[]
         condition=True
@@ -38,8 +36,6 @@ class Smart_Crossover:
         self.cycle=[]
         self.n_iter = 0
         self.value=0
-       
-        
         while condition:
             self.solution,cycle = self.optimize(rew_matrix,source_state,sink_state,cycle)
             self.n_iter+=1
@@ -55,26 +51,18 @@ class Smart_Crossover:
         for learner in self.learned_info:
             #Edges has visited states?
             edges[learner]=list(self.learned_info[learner]["state-reward"])
-            #print("Edges for learner")
-            #print(edges[learner])
+            print("Edges for learner")
+            print(edges[learner])
             
             for state in self.learned_info[learner]["state-reward"]:
                 if state not in list(total_info):
                     total_info[state]=self.learned_info[learner]["state-reward"][state]
-                    
             #Is there a check for if another state has learned connections that are not known to another?        
             for unknowns in self.learned_info[learner]["not_known"]:
                 if unknowns not in unknown_exist:
                     unknown_exist.append(unknowns)
                     
         total_info={"state-reward":total_info,"edges":edges,"not_known":unknown_exist}
-        print("Not known")
-        total_info['not_known'].sort(key=lambda x:x[0])
-        print(total_info['not_known'])
-        #print("State rewards")
-        #print(total_info['state-reward'])
-        #print("Edges")
-        #print(total_info['edges'])
         return total_info
         
         
@@ -110,25 +98,17 @@ class Smart_Crossover:
         sns.set(style='darkgrid')
 
         dict_states = list(self.ensemble["edges"].values())
-        #print("Dict states")
-        #print(dict_states)
         new=[]
         for i in dict_states:
             for j in i:
                 new.append(j)
         
-        new.sort()
         array_states=[*set(new)]
-        print("Array states")
-        print(array_states)
         
         #Randomly generated end of edges?
         array_edges=[(i[j],i[j+1]) for i in dict_states for j in range(len(i)-1)]
         
-        #print("Array edges")
-        #print(array_edges)
-        array_edges.sort(key=lambda x:x[0])
-        print("Known edges")
+        print("Array edges")
         print(array_edges)
         self.graph.add_nodes_from(array_states)
         self.graph.add_edges_from(array_edges)
@@ -145,74 +125,44 @@ class Smart_Crossover:
         #plt.savefig("first_graph.png")
         
         
-        #------------------------------------------------------------
-        #-----------------Declare Start and Finish Nodes-------------
-        #------------------------------------------------------------
+
         #randomize source
         choose_learner = random.choice(list(self.learned_info))
-        source_state = list(self.learned_info[choose_learner]["state-reward"])[0]
-        print("source learner")
-        print(list(self.learned_info[choose_learner]["state-reward"]))
-        print(list(self.learned_info[choose_learner]["state-reward"])[0])
+        source_state = list(self.learned_info[choose_learner]["state-reward"])[0]      
         #randomize sink
         #!!! Will sometimes cause infinite loop
         sink_state = source_state
         while sink_state == source_state:
             choose_learner = random.choice(list(self.learned_info))
             sink_state = list(self.learned_info[choose_learner]["state-reward"])[-1]
-            
-        print("sink learner")
-        print(list(self.learned_info[choose_learner]["state-reward"]))
-        print(list(self.learned_info[choose_learner]["state-reward"])[-1])
         
         #color[list(self.graph.nodes).index(source_state)]="green"
         #color[list(self.graph.nodes).index(sink_state)]="brown"
         
         #Make the adjacency matrix out of the previously added edges.
         adj_matrix = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
-        print("adjacency matrix")
-        print(adj_matrix)
-        
         rew_matrix = np.zeros(adj_matrix.shape)
         for row_index in range(len(adj_matrix)):
             for col_index in range(len(adj_matrix)): 
                 if adj_matrix[row_index][col_index]==1:
                     rew_matrix[row_index][col_index]=self.ensemble["state-reward"][array_states[col_index]]            
                 
-        #Where the not known edges are added.
+
         self.graph.add_edges_from(self.ensemble['not_known'])
         
         #If altered, make it -2 reward for nonexistent edges?
         altered = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
-        
-        print("altered matrix")
-        print(altered)
-        print(len(altered[0]))
-        
-        print("pre reward matrix")
-        print(rew_matrix)
-        print(len(rew_matrix[0]))
-        
         for row_index in range(len(altered)):
             for col_index in range(len(altered)): 
                 if altered[row_index][col_index]==1 and rew_matrix[row_index][col_index]==0 :
                     rew_matrix[row_index][col_index]=-2
-        
-        print("reward matrix")
-        print(rew_matrix)
 
         #plt.figure()
         
         #edges_color = self.color_edges(self.graph)
         #nx.draw(self.graph,node_color=color,with_labels=True,edge_color=edges_color)
         #plt.savefig("new_graph.png")
-        
-        print("Array index check")
-        print(array_states)
-        self.source_state = array_states[array_states.index(source_state)]
-        self.sink_state = array_states[array_states.index(sink_state)]
-        
-        print("start and end state", array_states[array_states.index(source_state)], array_states[array_states.index(sink_state)])
+
         return rew_matrix, array_states.index(source_state), array_states.index(sink_state)
 
     def optimize(self,rew_matrix,source_state,sink_state,cycle):
@@ -272,8 +222,6 @@ class Smart_Crossover:
         
         if problem.status == "infeasible":
             for cons in constraints:
-                print("Infeasible")
-                print("Dual value")
                 print(cons.dual_value)
                 return
         else:
@@ -285,7 +233,6 @@ class Smart_Crossover:
                         new_pairs.append((list(self.graph.nodes)[row_index],list(self.graph.nodes)[col_index]))
             g=nx.DiGraph()
             g.add_edges_from(new_pairs)
-            
             print("solution_edges",g.edges)
             
             #find cycles:
