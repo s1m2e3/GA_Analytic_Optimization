@@ -330,16 +330,8 @@ class Smart_Crossover:
         
         #create variables
         x=cvx.Variable(adj_matrix.shape)
-        #theta = cvx.Variable(adj_matrix.shape[0],boolean=True)
-
-        #big number M
-        #m=1000
-
-
-        
         #create constraints, x is binary
         constraints = [x<=1,x>=0]
-        #constraints += [theta<=1,x>=0]
         
         #Could this be set to <= 0 for better performance?
         for row_index in range(len(adj_matrix)):
@@ -351,7 +343,8 @@ class Smart_Crossover:
                 #constraint of only allowing directed edges
                 #!!!!!!!!!!!!!
                 #TODO: Fix, this one doesn't make sense.
-                #constraints += [x[row_index][col_index]+x[col_index][row_index]<=1]
+                constraints += [x[row_index][col_index]+x[col_index][row_index]<=1]
+       
 
         #Sum of inflow is the sum of outflow 
         vector = np.zeros(len(adj_matrix))
@@ -362,12 +355,6 @@ class Smart_Crossover:
         #force only one  entry and only one exit 
         constraints += [cvx.sum(x,axis=0)<=1]
         constraints += [cvx.sum(x,axis=1)<=1]
-        
-        #if edge is activated it has to have another edge which is incident.
-        #for row_index in range(len(adj_matrix)):
-        #    for col_index in range(len(adj_matrix)): 
-        #constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)>=2-m*(1-theta)]
-        #constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)<=1+m*(theta)]        
 
         #Add constraints for found cycles:
         #Q: Can cycles be avoided with some constraints?
@@ -441,9 +428,7 @@ class Smart_Crossover:
                 
                 plt.savefig("rebuild_graph.png")
                 '''
-                ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[sink_state],list(self.graph.nodes)[source_state])
-                ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
-                return ordered_path,cycles
+                return list(g.edges),cycles
 
 
             

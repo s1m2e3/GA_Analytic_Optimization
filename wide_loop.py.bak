@@ -274,8 +274,8 @@ if __name__== "__main__":
                 model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
                 #print("hi")
                 #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
-            #print('sa_info')
-            #print(model['sa_info'])
+            print('sa_info')
+            print(model['sa_info'])
             
             sa_table = []
             for j in range(len(model['sa_info'])):

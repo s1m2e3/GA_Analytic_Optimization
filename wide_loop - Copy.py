@@ -103,7 +103,7 @@ if __name__== "__main__":
     #----------------------------------------------------------------
     #--------------------------Globals-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 1
+    n_episodes = 2
     ga_frequency = 1   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
     
     #Seed randoms
@@ -143,14 +143,12 @@ if __name__== "__main__":
         model_dict[i]['plotted_rewards'] = []
         
         #Keeping track for crossover model.
-        model_dict[i]['sa_info'] = [list([{} for x in range(n_actions)]) for x in range(n_observations)]
         model_dict[i]['transition_bank'] = []
-        '''
         model_dict[i]['static_transitions'] = []
         model_dict[i]['known_rewards'] = np.full(n_observations,-1)
         model_dict[i]['known_transitions'] = np.full((n_observations, n_observations), 0)
         model_dict[i]['known_not_transitions'] = np.full((n_observations, n_observations), 0)
-        '''
+    
     #---------------------------------------------------------
     #------------------Initialize Animation-------------------
     #---------------------------------------------------------
@@ -212,18 +210,13 @@ if __name__== "__main__":
                 nr = {}
                 nr['from_state'] = model['current_state']
                 nr['action'] = model['action']
-                nr['to_state'] = int(model['next_state'])
+                nr['to_state'] = model['next_state']
                 nr['reward'] = model['reward']
                 nr['done'] = model['done']
                 
                 #print("The model is: ", model)
                 model['transition_bank'].append(copy.deepcopy(nr))
                 
-                
-                
-                #-----------------------------------------------
-                #-----------Q-Table update----------------------
-                #-----------------------------------------------                
                 # We update our Q-table using the Q-learning iteration
                 model['Q_table'][model['current_state'], model['action']] = (1-model['lr']) * model['Q_table'][model['current_state'], model['action']] + model['lr']*(model['reward'] + model['gamma']*max(model['Q_table'][model['next_state'],:]))
                 
@@ -237,7 +230,6 @@ if __name__== "__main__":
                 #Update state record
                 model['current_state'] = model['next_state']
             
-            #Update parameters that adjust on episode.
             #We update the exploration proba using exponential decay formula 
             model['exploration_proba'] = max(model['min_exploration_proba'], np.exp(-model['exploration_decreasing_decay']*e))
             model['rewards_per_episode'].append(model['total_episode_reward'])
@@ -262,38 +254,7 @@ if __name__== "__main__":
             #print()
             #print("Static transitions")
             
-            #Convert to sa_info
-            #print("sa_info")
-            #print(model['sa_info'])
-            for record in model['transition_bank']:
-                i1 = record['from_state']
-                i2 = record['action']
-                #print(i1, i2)
-                #print(model['sa_info'][i1][i2])
-                #print(model['sa_info'][record['from_state'][record['action']])
-                model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
-                #print("hi")
-                #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
-            #print('sa_info')
-            #print(model['sa_info'])
-            
-            sa_table = []
-            for j in range(len(model['sa_info'])):
-                row = []
-                for k in range(len(model['sa_info'][0])):
-                    if len(model['sa_info'][j][k]) > 0:
-                        row.append(int(model['sa_info'][j][k]['to_state']))
-                    else:
-                        row.append('*')
-                sa_table.append(row)
-            
-            '''
-            print('sa_table')
-            for entry in sa_table:
-                print(entry)
-            '''
-            
-            '''
+            #---------------Convert to Middle Form of State Knowledge---------------------------
             for record in model['transition_bank']:
                 if record['from_state'] == record['to_state']:
                     #print(record)
@@ -315,17 +276,13 @@ if __name__== "__main__":
                     model['known_not_transitions'][i] = 0
                             
             #Clear out transition bank from the episode:
-            '''
-            print("Transition bank")
-            for transition in model['transition_bank']:
-                print(int(transition['from_state']), int(transition['to_state']))
             model['transition_bank'] = []
 
         #-------------------------------------------------------------
         #--------------------GA Procedure-----------------------------
         #-------------------------------------------------------------
         #If time to run the ga
-        if e % ga_frequency == 0: # and e != 0:
+        if e % ga_frequency == 0 and e != 0:
             
             mutprb = 0.05   #Mutation probability
             cxprb = 1    #Crossover probability
@@ -343,7 +300,7 @@ if __name__== "__main__":
                     #Initialize learned info structure
                     learned_info = {}
                     
-                    #Convert them to algorithm compatible forms
+                    #Convert them to compatible forms
                     for j, model in enumerate([parent_1, parent_2]):
                         learned_info[j] = {}
                         learned_info[j]['state-reward'] = {}
@@ -351,62 +308,39 @@ if __name__== "__main__":
                         learned_info[j]['not_known'] = []
                         learned_info[j]['edges_exist'] = []
                         
-                        for k in range(0,n_observations):
-                            existing_edges = []
-                            not_known_tos = [True] * n_observations
-                            known_edges_counter = 0
-                            
-                            for m in range(0, n_actions):
-                                record = model['sa_info'][k][m]
-                                if len(record) > 0:
-                                    known_edges_counter += 1
-                                    #Update reward record
-                                    learned_info[j]['state-reward'][record['to_state']] = record['reward']
-                                    
-                                    #Update known states
-                                    learned_info[j]['known_states'].append(k)
-                                    learned_info[j]['known_states'].append(record['to_state'])
-                                    
-                                    
-                                    #Update edges exist
-                                    existing_edges.append((k,record['to_state']))
-                                    
-                                    not_known_tos[record['to_state']] = False
-
-                                    learned_info[j]['edges_exist'].append((k,record['to_state']))
+                        #translate known rewards into algorithm format.
+                        #print(model['known_rewards'])
+                        for k in range(len(model['known_rewards'])):
+                            if model['known_rewards'][k] != -1:
+                                learned_info[j]['state-reward'][k] = model['known_rewards'][k]
                         
-            
-            
-            
-                        #Deal with not known edges    
-                        #Remove duplicate edges            
-                        learned_info[j]['edges_exist'] = list(dict.fromkeys(learned_info[j]['edges_exist'])) 
+                        #Get known states from state reward
+                        learned_info[j]['known_states'] = list(learned_info[j]['state-reward'].keys())
+                        edges_exist = []
                         
-                        learned_info[j]['known_states'] = list(set(learned_info[j]['known_states']))
-                        
-                        learned_info[j]['not_known'] = [(from_state, to_state) for from_state in learned_info[j]['known_states'] for to_state in learned_info[j]['known_states'] if (from_state, to_state) not in learned_info[j]['edges_exist']]
-
                         '''
-                        #Add not_known edges
-                        if known_edges_counter >= n_actions:
-                            pass
-                        else:
-                            print("Not known edges")
-                            
-                            print([(k,to_state) for to_state in np.array(range(n_observations))[np.array(not_known_tos)]])
-                            learned_info[j]['not_known'].extend([(k,to_state) for to_state in np.array(range(n_observations))[not_known_tos]])
-                        '''       
-
-                        
-                        
-                        print("Input", j)
+                        print("Known transitions")
+                        print(model['known_transitions'])
+                        print('not knowns')
+                        print(model['known_transitions'])
+                        print()
+                        print(model['known_not_transitions'])
+                        print()
                         print(learned_info[j]['known_states'])
-                        print(learned_info[j]['edges_exist'])
-                        print(learned_info[j]['not_known'])
-                        print()
-                        print()
+                        '''
                         
                         
+                        for k in range(len(model['known_transitions'][0])):
+                            for m in range(len(model['known_transitions'][1])):
+                                #If the edge exist, add it.
+                                if model['known_transitions'][k][m] == 1:
+                                    learned_info[j]['edges_exist'].append((k,m))
+                                
+                                #If not known to exist, but can't be ruled out, add to not_knowns (Note, only between known states currently)
+
+                                if model['known_transitions'][k][m] != 1 and model['known_not_transitions'][k][m] != 1:
+                                    if k in learned_info[j]['known_states'] and m in learned_info[j]['known_states']:
+                                        learned_info[j]['not_known'].append((k,m))
                                         
                                         
                     
@@ -422,8 +356,6 @@ if __name__== "__main__":
                     #player_location
                     #goal_location
                     
-                    print("Pre learner")
-                    print(learned_info)
                     crossover=smart_crossover.Smart_Crossover(learned_info)
                     
                     print("Source state", crossover.source_state)

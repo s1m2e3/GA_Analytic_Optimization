@@ -53,11 +53,13 @@ for i in range(1):
     model_dict[i]['plotted_rewards'] = []
     
     #Keeping track for crossover model.
-    model_dict[i]['transition_bank'] = []
-    model_dict[i]['static_transitions'] = []
-    model_dict[i]['known_rewards'] = np.full(n_observations,-1)
-    model_dict[i]['known_transitions'] = np.full((n_observations, n_observations), 0)
-    model_dict[i]['known_not_transitions'] = np.full((n_observations, n_observations), 0)
+    #model_dict[i]['transition_bank'] = []
+    model_dict[i]['transition_dict'] = {}
+    model_dict[i]['reward_dict'] = {}
+    #model_dict[i]['static_transitions'] = []
+    #model_dict[i]['known_rewards'] = np.full(n_observations,-1)
+    #model_dict[i]['known_transitions'] = np.full((n_observations, n_observations), 0)
+    #model_dict[i]['known_not_transitions'] = np.full((n_observations, n_observations), 0)
     
     
 '''
@@ -127,15 +129,42 @@ for e in range(n_episodes):
             model['next_state'], model['reward'], model['done'], _ = env.step(model['action'])
             
             #Add to transition bank
+            '''
             nr = {}
             nr['from_state'] = model['current_state']
             nr['action'] = model['action']
             nr['to_state'] = model['next_state']
             nr['reward'] = model['reward']
             nr['done'] = model['done']
+            '''
             
             #print("The model is: ", model)
-            model['transition_bank'].append(copy.deepcopy(nr))
+            #model['transition_bank'].append(copy.deepcopy(nr))
+            
+            #----------------------------------------------
+            #----------------Update Dicts-------------------
+            #----------------------------------------------
+            
+            #Next state dict
+            #If current state not in dict.
+            if model['current_state'] not in model['transition_dict']:
+                model['transition_dict'][model['current_state']] = {model['action']: model['next_state']}
+            #Starting state exists
+            else:
+                model['transition_dict'][model['current_state']][model['action']] = model['next_state']
+                
+            #Reward dict
+            #If current state not in dict.
+            if model['current_state'] not in model['transition_dict']:
+                model['transition_dict'][model['current_state']] = {model['action']: model['reward']}
+            #Starting state exists
+            else:
+                model['transition_dict'][model['current_state']][model['action']] = model['reward']   
+                
+                
+            #-----------------------------------------------
+            #-----------Q-Table update----------------------
+            #-----------------------------------------------
             
             # We update our Q-table using the Q-learning iteration
             model['Q_table'][model['current_state'], model['action']] = (1-model['lr']) * model['Q_table'][model['current_state'], model['action']] + model['lr']*(model['reward'] + model['gamma']*max(model['Q_table'][model['next_state'],:]))
@@ -170,6 +199,7 @@ for e in range(n_episodes):
         #Update failed transitions
         #print()
         #print("Static transitions")
+        '''
         for record in model['transition_bank']:
             if record['from_state'] == record['to_state']:
                 #print(record)
@@ -193,6 +223,9 @@ for e in range(n_episodes):
         #Clear out transition bank from the episode:
         
         model['transition_bank'] = []
+        '''
+        
+        
 
 
 #Print out the outputs

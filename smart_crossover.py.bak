@@ -441,9 +441,7 @@ class Smart_Crossover:
                 
                 plt.savefig("rebuild_graph.png")
                 '''
-                ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[sink_state],list(self.graph.nodes)[source_state])
-                ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
-                return ordered_path,cycles
+                return list(g.edges),cycles
 
 
             
