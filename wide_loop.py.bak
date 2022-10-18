@@ -36,7 +36,6 @@ import smart_crossover
 #Support for RL environment.
 import gym
 import vector_grid_goal #Custom environment
-
 #-------------------------------------------
 #--------------Functions--------------------
 #-------------------------------------------
@@ -118,8 +117,16 @@ if __name__== "__main__":
     grid_dims = (5,5)
     player_location = (0,0)
     goal_location = (4,4)
-
-    env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map='random')
+    
+    map = np.array([[0,1,1,1,0],
+                    [0,0,1,0,0],
+                    [0,0,0,0,0],
+                    [0,1,0,0,0],
+                    [0,0,0,0,0]])
+           
+    env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
+    env.action_space.np_random.seed(1)
+    
     n_observations = env.observation_space.n
     n_actions = env.action_space.n
     
@@ -201,7 +208,9 @@ if __name__== "__main__":
                 
                 #Epsilon random action decision
                 if np.random.uniform(0,1) < model['exploration_proba']:
+                    #model['action'] = env.action_space.sample()
                     model['action'] = env.action_space.sample()
+                    
                 else:
                     model['action'] = np.argmax(model['Q_table'][model['current_state'],:])
                 
@@ -274,8 +283,8 @@ if __name__== "__main__":
                 model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
                 #print("hi")
                 #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
-            print('sa_info')
-            print(model['sa_info'])
+            #print('sa_info')
+            #print(model['sa_info'])
             
             sa_table = []
             for j in range(len(model['sa_info'])):

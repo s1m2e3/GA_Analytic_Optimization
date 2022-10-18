@@ -67,7 +67,6 @@ class CustomEnv(Env):
         
         else:
             self.field = map
-            
         print("Field")
         print(self.field)
         
