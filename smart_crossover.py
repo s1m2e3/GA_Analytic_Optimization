@@ -56,6 +56,7 @@ class Smart_Crossover:
         state_reward = {}
         edges = []
         not_known = []
+        known_not_exist = []
         
         for learner in self.learned_info.values():
             print("learner")
@@ -72,16 +73,39 @@ class Smart_Crossover:
         
         #Only unique states
         known_states = list(set(known_states))
+        known_states.sort()
+        
+        #Figure out known not edges.
+        for from_state in known_states:
+            temp_not = []
+            temp_exists = []
+            trans_counter = 0
+            for to_state in known_states:
+                if (from_state, to_state) in edges:
+                    trans_counter += 1
+                    #temp_exists.append((from_state, to_state))
+                else:
+                    temp_not.append((from_state, to_state))
+            #If transitions greater or equal to actions, can eliminate others. (Wrong, change to reflect having tried all actions)
+            if trans_counter >= 4: #Hardcoded, CHANGE
+                known_not_exist.extend(temp_not)
+                
+            
+            
+            
         #Figure out new not_known edges
         not_known = [(from_state, to_state) for from_state in known_states for to_state in known_states if (from_state, to_state) not in edges]
+        not_known = [transition for transition in not_known if transition not in known_not_exist]
         not_known = list(set(not_known))        
-        not_known.sort()    
+        not_known.sort()
+
+
 
         edges = list(set(edges))        
         edges.sort()         
         
         
-        total_info={"state-reward":state_reward,"edges":edges,"not_known":not_known, "known_states": known_states}
+        total_info={"state-reward":state_reward,"edges":edges,"not_known":not_known, "known_states": known_states, "known_not_exist": known_not_exist}
 
         print("State rewards")
         print(total_info['state-reward'])
@@ -288,7 +312,7 @@ class Smart_Crossover:
                 else: 
                     rew_matrix[row_index][col_index]=-5
                     
-        '''       
+              
         #Where the not known edges are added.
         self.graph.add_edges_from(self.ensemble['not_known'])
         
@@ -298,7 +322,7 @@ class Smart_Crossover:
         print("altered matrix")
         print(altered)
         print(len(altered[0]))
-        
+        '''
         print("base reward matrix")
         print(rew_matrix)
         print(len(rew_matrix[0]))
