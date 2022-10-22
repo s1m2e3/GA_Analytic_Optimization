@@ -15,6 +15,7 @@ import copy
 
 import random
 
+
 from datetime import datetime
 import sys
 import os
@@ -126,7 +127,8 @@ if __name__== "__main__":
     
     #Deterministic switch for action environment.
     env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
-    env.action_space.np_random.seed(1)
+    
+    #env.action_space.np_random.seed(seed=1)
     
     n_observations = env.observation_space.n
     n_actions = env.action_space.n

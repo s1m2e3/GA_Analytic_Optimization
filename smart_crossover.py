@@ -30,7 +30,8 @@ class Smart_Crossover:
         
         #Prepare
         rew_matrix,source_state,sink_state = self.prep()
-        
+        self.source_state = source_state
+        self.sink_state = sink_state
         #Check that everything is there:
         print("Index of source and sink", source_state, "", sink_state)
         
@@ -381,7 +382,7 @@ class Smart_Crossover:
         vector = np.zeros(len(adj_matrix))
         vector[sink_state]=-1
         vector[source_state]=1
-        constraints += [cvx.sum(x,axis=0)-cvx.sum(x,axis=1)==vector]
+        constraints += [cvx.sum(x,axis=1)-cvx.sum(x,axis=0)==vector]
         
         #force only one  entry and only one exit 
         constraints += [cvx.sum(x,axis=0)<=1]
@@ -459,13 +460,13 @@ class Smart_Crossover:
                 for node in nodes:
                     new_list=(list(self.graph.nodes))
                     new_colors.append(color[new_list.index(node)])
-
-                plt.figure(figsize=(20,10))
-                nx.draw(g,node_color=new_colors,edge_color=edges_color,with_labels=True)
                 
+                plt.figure(figsize=(20,10))
+                nx.draw(g,with_labels=True)
                 plt.savefig("rebuild_graph.png")
                 '''
-                ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[sink_state],list(self.graph.nodes)[source_state])
+                
+                ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
                 ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
                 return ordered_path,cycles
 

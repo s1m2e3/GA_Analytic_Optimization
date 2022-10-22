@@ -28,7 +28,8 @@ class Smart_Crossover:
         
         #Prepare
         rew_matrix,source_state,sink_state = self.prep()
-        
+        self.source_state = list(self.graph.nodes)[source_state]
+        self.sink_state = list(self.graph.nodes)[sink_state]
         
         self.solution=[]
         condition=True
@@ -262,11 +263,12 @@ class Smart_Crossover:
                     new_list=(list(self.graph.nodes))
                     new_colors.append(color[new_list.index(node)])
 
-                plt.figure(figsize=(20,10))
-                nx.draw(g,node_color=new_colors,edge_color=edges_color,with_labels=True)
-                
-                plt.savefig("rebuild_graph.png")
                 '''
+                plt.figure(figsize=(20,10))
+                nx.draw(g,with_labels=True)
+                plt.show()
+                print("source state",list(self.graph.nodes)[source_state])
+                print("sink state",list(self.graph.nodes)[sink_state])
                 return list(g.edges),cycles
 
 

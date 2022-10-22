@@ -10,7 +10,7 @@ import networkx as nx
 from datetime import datetime
 import sys
     
-import smart_crossover_original as smart_crossover
+import smart_crossover as smart_crossover
 import os
 
 
