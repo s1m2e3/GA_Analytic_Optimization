@@ -11,9 +11,13 @@ warnings.filterwarnings(action='ignore', category=FutureWarning)
 
 #General Imports
 import numpy as np
+np.set_printoptions(suppress = True)
 import copy
+import json
+from sklearn.preprocessing import normalize
 
 import random
+
 
 from datetime import datetime
 import sys
@@ -102,12 +106,17 @@ if __name__== "__main__":
     #----------------------------------------------------------------
     #--------------------------Globals-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 1
-    ga_frequency = 1   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
+    n_episodes = 100
+    ga_frequency = 5   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
     
     #Seed randoms
     random.seed(1234)
     np.random.seed(1234)
+    crossover_chance = 1
+    #save_file = "regular_json.json"
+    save_file = "crossover_json.json"
+    #regular_json.json
+    #crossover_json.json
     #env = gym.make('FrozenLake-v1')    #If you want to try with frozen lake.
     #env.seed(0)
     
@@ -123,9 +132,12 @@ if __name__== "__main__":
                     [0,0,0,0,0],
                     [0,1,0,0,0],
                     [0,0,0,0,0]])
-           
+    
+    #Deterministic switch for action environment.
     env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
-    env.action_space.np_random.seed(1)
+    
+    #Make action space deterministic
+    env.action_space.np_random.seed(seed=1)
     
     n_observations = env.observation_space.n
     n_actions = env.action_space.n
@@ -139,13 +151,13 @@ if __name__== "__main__":
         model_dict[i] = {}
         #model_dict[i]['n_episodes'] = 20000      #number of episode we will run
         model_dict[i]['max_iter_episode'] = 10  #maximum of iteration per episode
-        model_dict[i]['exploration_proba'] = 1   #initialize the exploration probability to 1
+        model_dict[i]['exploration_proba'] = 0.5   #initialize the exploration probability to 1
         model_dict[i]['exploration_decreasing_decay'] = 0.001    #exploartion decreasing decay for exponential decreasing
         model_dict[i]['min_exploration_proba'] = 0.01    # minimum of exploration proba
         model_dict[i]['gamma'] = 0.99            #discounted factor
         model_dict[i]['lr'] = 0.1                 #learning rate
         model_dict[i]['Q_table'] = np.zeros((n_observations,n_actions))
-        model_dict[i]['total_rewards_episode'] = list()
+        #model_dict[i]['total_rewards_episode'] = list()
         model_dict[i]['rewards_per_episode'] = []
         model_dict[i]['plotted_rewards'] = []
         
@@ -261,7 +273,8 @@ if __name__== "__main__":
                 animate(5)
                 
             if e == n_episodes-1:
-                print("Done")
+                pass
+                #print("Done")
                 
             #Update the models memory tables
             #for record in model['transition_bank']:
@@ -274,6 +287,10 @@ if __name__== "__main__":
             #Convert to sa_info
             #print("sa_info")
             #print(model['sa_info'])
+            
+            
+
+            
             for record in model['transition_bank']:
                 i1 = record['from_state']
                 i2 = record['action']
@@ -325,11 +342,21 @@ if __name__== "__main__":
                             
             #Clear out transition bank from the episode:
             '''
+            '''
             print("Transition bank")
             for transition in model['transition_bank']:
                 print(int(transition['from_state']), int(transition['to_state']))
             model['transition_bank'] = []
-
+            
+        '''
+        print("-"*40)
+        print("Episode:", e, "Rewards: ")        
+        for key in model_dict.keys():
+            model = model_dict[key]
+            #Print reward
+            print(key, ":", model['total_episode_reward'])
+        print("-"*40)            
+            
         #-------------------------------------------------------------
         #--------------------GA Procedure-----------------------------
         #-------------------------------------------------------------
@@ -337,7 +364,7 @@ if __name__== "__main__":
         if e % ga_frequency == 0: # and e != 0:
             
             mutprb = 0.05   #Mutation probability
-            cxprb = 1    #Crossover probability
+            cxprb = crossover_chance    #Crossover probability
             
             #Different ways of selecting which individuals to crossover. But can do crossover based on sequential.
             #Currently replacing both parents with children.
@@ -407,14 +434,14 @@ if __name__== "__main__":
                         '''       
 
                         
-                        
+                        '''
                         print("Input", j)
                         print(learned_info[j]['known_states'])
                         print(learned_info[j]['edges_exist'])
                         print(learned_info[j]['not_known'])
                         print()
                         print()
-                        
+                        '''
                         
                                         
                                         
@@ -431,12 +458,12 @@ if __name__== "__main__":
                     #player_location
                     #goal_location
                     
-                    print("Pre learner")
-                    print(learned_info)
+                    #print("Pre learner")
+                    #print(learned_info)
                     crossover=smart_crossover.Smart_Crossover(learned_info)
                     
-                    print("Source state", crossover.source_state)
-                    print("Sink state", crossover.sink_state)
+                    #print("Source state", crossover.source_state)
+                    #print("Sink state", crossover.sink_state)
                     
                     print("Solution time: ", datetime.now() - start)
                     
@@ -445,24 +472,108 @@ if __name__== "__main__":
                     #print("number of states: ",n_states)
                     print("n_iter:",crossover.n_iter)
                     print("solution:",crossover.solution)
+                    
                     print("value:",crossover.value)
                     
+                    
+                    #--------------------------------------------------
+                    #-------------Create New Individuals---------------
+                    #--------------------------------------------------
+                    #Note: Currently replacing in place.
+                    print("-"*10, "Making new individuals", "-"*10)
+                    solution_path = crossover.solution
+                    print("Solution path", solution_path)
+                    #Get the ensemble information
+                    ensemble = crossover.ensemble
+                    #print("Edges", ensemble['edges'])
+                    
+                    
+                    #For known edges, get the known transition
+                    sa_path = []
+                    for edge in solution_path:
+                        if edge in ensemble['edges']:
+                            new_sa_pair = (-1,-1)
+                            print("Edge", edge, "known")
+                            #Search the parents for the correct action
+                            for parent in [parent_1, parent_2]:
+                                for index, sa_pair in enumerate(parent['sa_info'][edge[0]]):
+                                    if len(sa_pair) > 0:
+                                        #print("SA Pair", sa_pair)
+                                        if sa_pair['to_state'] == edge[1]:
+                                            #print("Found matching sa pair", sa_pair)
+                                            new_sa_pair = (edge[0], index)
+                                            break
+                            sa_path.append(new_sa_pair)           
+                                    
+                        else:
+                            print("Edge", edge, "unknown")
+                            sa_path.append((edge[0], env.action_space.sample()))
+                            break
+                    
+                    print("SA_Path")
+                    print(sa_path)
+                    
+                    #For each individual, set the path sa pairs to 1.5 times the highest Q value.
+                    for parent in [parent_1, parent_2]:
+                        #Calculate the highest Q value
+                        max_Q = max(max(x) for x in parent['Q_table'])
+                        #print("Max Q: ", max_Q)
+                        #print("Pre Q table")
+                        #print(parent['Q_table'])
+                        for sa_pair in sa_path:
+                            parent['Q_table'][sa_pair[0], sa_pair[1]] = max(max_Q * 1.2, 1)
+                        
+                        #Normalize matrix
+                        normalize(parent['Q_table'], axis=1, norm='l1')
+                        normalize(parent['Q_table'], axis=0, norm='l1')
+                        
+                        #print("Post Q table")
+                        #print(parent['Q_table'])
+                                
+        #---------------------------------------------------------------
+        #------------------------New Generation-------------------------
+        #---------------------------------------------------------------
+        '''
+        print("Current Models")
+        for model_num, model in model_dict.items():
+            print("Model: ", model_num)
+            for row_number, row in enumerate(model['Q_table']):
+                print(row_number, ":", np.argmax(row))
+            #print(model['Q_table'])
+        '''         
 
     #-----------------------------------------------------------------------
     #------------------------End of Experiment Outputs----------------------
     #-----------------------------------------------------------------------
-    '''
+    print("HI")
+    #Save as json
+    json_output = {'model_rewards': []}
+    
     #Print out the outputs
     for key in model_dict.keys():
         model = model_dict[key]     #copy by reference
-        print('Known rewards')
-        print(model['known_rewards'])
         
-        print('Known transitions')
-        #print(model['known_transitions'])
-        for line in model['known_transitions']:
-            print(line)
+        #Save reward to json
+        json_output['model_rewards'].append(model['rewards_per_episode'])
         
-        print('Known not transitions')
-        print(model['known_not_transitions'])       
-    '''
+        #Print out rewards.
+        
+        #Graph rewards
+        print("Rewards", model['rewards_per_episode'])
+        plt.plot(model['rewards_per_episode'])
+    
+    plt.title("Rewards per individual")
+    #plt.show()
+    plt.savefig("Rewards.png")
+    
+    #Save json to file
+    with open(save_file, 'w') as f:
+        json.dump(json_output, f)
+    
+    
+    #---------------Print final models----------------------
+    print()
+    print("Current Models")
+    for model_num, model in model_dict.items():
+        print("Model: ", model_num)
+        print(model['Q_table'])

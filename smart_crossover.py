@@ -60,8 +60,8 @@ class Smart_Crossover:
         known_not_exist = []
         
         for learner in self.learned_info.values():
-            print("learner")
-            print(learner)
+            #print("learner")
+            #print(learner)
             #Add known states
             known_states.extend(learner['known_states'])
             
@@ -107,20 +107,22 @@ class Smart_Crossover:
         
         
         total_info={"state-reward":state_reward,"edges":edges,"not_known":not_known, "known_states": known_states, "known_not_exist": known_not_exist}
-
+        
+        
         print("State rewards")
         print(total_info['state-reward'])
+        '''
         print("Known states")
         print(known_states)
         print("Edges")
         print(edges)
         
         print("Not known")
- 
+        
         #total_info['not_known'].sort(key=lambda x:x[0])
         print(not_known)
         print()
-
+        '''
 
           
         '''
@@ -255,9 +257,9 @@ class Smart_Crossover:
         #randomize source
         choose_learner = random.choice(list(self.learned_info))
         source_state = list(self.learned_info[choose_learner]["state-reward"])[0]
-        print("source learner")
-        print(list(self.learned_info[choose_learner]["state-reward"]))
-        print(list(self.learned_info[choose_learner]["state-reward"])[0])
+        #print("source learner")
+        #print(list(self.learned_info[choose_learner]["state-reward"]))
+        #print(list(self.learned_info[choose_learner]["state-reward"])[0])
         #randomize sink
         #!!! Will sometimes cause infinite loop
         sink_state = source_state
@@ -265,17 +267,17 @@ class Smart_Crossover:
             choose_learner = random.choice(list(self.learned_info))
             sink_state = list(self.learned_info[choose_learner]["state-reward"])[-1]
             
-        print("sink learner")
-        print(list(self.learned_info[choose_learner]["state-reward"]))
-        print(list(self.learned_info[choose_learner]["state-reward"])[-1])
+        #print("sink learner")
+        #print(list(self.learned_info[choose_learner]["state-reward"]))
+        #print(list(self.learned_info[choose_learner]["state-reward"])[-1])
         
         #color[list(self.graph.nodes).index(source_state)]="green"
         #color[list(self.graph.nodes).index(sink_state)]="brown"
         
         #Make the adjacency matrix out of the previously added edges.
         adj_matrix = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
-        print("adjacency matrix")
-        print(adj_matrix)
+        #print("adjacency matrix")
+        #print(adj_matrix)
         
         #Convert the reward dictionary to a useful form
         #print("state reward")
@@ -284,8 +286,8 @@ class Smart_Crossover:
         #Put in order
         ordered_sr = list(zip(self.ensemble['state-reward'].keys(), self.ensemble['state-reward'].values()))
         ordered_sr.sort()
-        print("Rewards")
-        print(ordered_sr)
+        #print("Rewards")
+        #print(ordered_sr)
         
         #-------------------------------------------
         #-----------Create Reward Matrix-----------
@@ -318,19 +320,19 @@ class Smart_Crossover:
         self.graph.add_edges_from(self.ensemble['not_known'])
         
         #If altered, make it -2 reward for nonexistent edges
-        altered = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
+        #altered = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
         
-        print("altered matrix")
-        print(altered)
-        print(len(altered[0]))
+        #print("altered matrix")
+        #print(altered)
+        #print(len(altered[0]))
         '''
         print("base reward matrix")
         print(rew_matrix)
         print(len(rew_matrix[0]))
         '''       
         
-        print("reward matrix")
-        print(rew_matrix)
+        #print("reward matrix")
+        #print(rew_matrix)
 
         #plt.figure()
         
@@ -338,8 +340,8 @@ class Smart_Crossover:
         #nx.draw(self.graph,node_color=color,with_labels=True,edge_color=edges_color)
         #plt.savefig("new_graph.png")
         
-        print("Index check")
-        print(self.ensemble['known_states'])
+        #print("Index check")
+        #print(self.ensemble['known_states'])
         self.source_state = self.ensemble['known_states'][self.ensemble['known_states'].index(source_state)]
         self.sink_state = self.ensemble['known_states'][self.ensemble['known_states'].index(sink_state)]
         #self.source_state = array_states[array_states.index(source_state)]
@@ -432,7 +434,7 @@ class Smart_Crossover:
             g=nx.DiGraph()
             g.add_edges_from(new_pairs)
             
-            print("solution_edges",g.edges)
+            #print("solution_edges",g.edges)
             
             #find cycles:
             cycles=sorted(nx.simple_cycles(g))
