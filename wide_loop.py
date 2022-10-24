@@ -106,8 +106,8 @@ if __name__== "__main__":
     #----------------------------------------------------------------
     #--------------------------Globals-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 200
-    ga_frequency = 5   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
+    n_episodes = 2000
+    ga_frequency = 20   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
     
     #Seed randoms
     random.seed(1234)
@@ -137,8 +137,9 @@ if __name__== "__main__":
     env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
     
     #Make action space deterministic
-    env.action_space.np_random.seed(seed=1)
-    
+    #env.action_space.np_random.seed(seed=1)
+    env.action_space.seed(2)
+
     n_observations = env.observation_space.n
     n_actions = env.action_space.n
     

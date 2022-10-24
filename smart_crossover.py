@@ -1,6 +1,7 @@
 #Sam, modified by Kyle Norland
 #Modified 10/10/22
 
+from xmlrpc.client import boolean
 import numpy as np
 import cvxpy as cvx
 import random
@@ -8,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 from datetime import datetime
+import time
 
 
 
@@ -354,9 +356,8 @@ class Smart_Crossover:
         
         #Extra computational time from making multiple adjacency matrices?
         adj_matrix = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
-        
         #create variables
-        x=cvx.Variable(adj_matrix.shape)
+        x=cvx.Variable(adj_matrix.shape, boolean=True)
         #theta = cvx.Variable(adj_matrix.shape[0],boolean=True)
 
         #big number M
@@ -438,16 +439,16 @@ class Smart_Crossover:
             
             #find cycles:
             cycles=sorted(nx.simple_cycles(g))
-            print("found cycles",cycles)
+            #print("found cycles",cycles)
             
             if len(cycles)>0:
                 for cycle in cycles:
-                    print(cycle)
+                #    print(cycle)
                     
                     if cycle not in self.cycle:
                         self.cycle.append(cycle)
-                        print("added cycle")
-                print("found cycles:",self.cycle)
+                        #print("added cycle")
+                #print("found cycles:",self.cycle)
                 return list(g.edges),cycles
             
             else: 
@@ -465,7 +466,7 @@ class Smart_Crossover:
                 
                 plt.figure(figsize=(20,10))
                 nx.draw(g,with_labels=True)
-                plt.savefig("rebuild_graph.png")
+                plt.show()
                 '''
                 
                 ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
