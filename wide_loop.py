@@ -106,12 +106,12 @@ if __name__== "__main__":
     #----------------------------------------------------------------
     #--------------------------Globals-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 200
+    n_episodes = 150
     ga_frequency = 5   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
     
     #Seed randoms
-    random.seed(1234)
-    np.random.seed(1234)
+    random.seed(12345)  #1234
+    np.random.seed(12345)    #1234
     crossover_chance = 1
     #save_file = "regular_json.json"
     save_file = "crossover_json.json"
@@ -137,7 +137,7 @@ if __name__== "__main__":
     env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
     
     #Make action space deterministic
-    env.action_space.np_random.seed(seed=1)
+    env.action_space.np_random.seed(seed=3)
     
     n_observations = env.observation_space.n
     n_actions = env.action_space.n
@@ -150,9 +150,9 @@ if __name__== "__main__":
     for i in range(2):
         model_dict[i] = {}
         #model_dict[i]['n_episodes'] = 20000      #number of episode we will run
-        model_dict[i]['max_iter_episode'] = 10  #maximum of iteration per episode
-        model_dict[i]['exploration_proba'] = 0.5   #initialize the exploration probability to 1
-        model_dict[i]['exploration_decreasing_decay'] = 0.001    #exploartion decreasing decay for exponential decreasing
+        model_dict[i]['max_iter_episode'] = 20  #maximum of iteration per episode
+        model_dict[i]['exploration_proba'] = 0.3   #Base 1#initialize the exploration probability to 1
+        model_dict[i]['exploration_decreasing_decay'] = 0.01    #Base 0.001 #exploration decreasing decay for exponential decreasing
         model_dict[i]['min_exploration_proba'] = 0.01    # minimum of exploration proba
         model_dict[i]['gamma'] = 0.99            #discounted factor
         model_dict[i]['lr'] = 0.1                 #learning rate
@@ -524,8 +524,10 @@ if __name__== "__main__":
                             parent['Q_table'][sa_pair[0], sa_pair[1]] = max(max_Q * 1.2, 1)
                         
                         #Normalize matrix
-                        normalize(parent['Q_table'], axis=1, norm='l1')
-                        normalize(parent['Q_table'], axis=0, norm='l1')
+                        #Normalize rows
+                        parent['Q_table'] = normalize(parent['Q_table'], axis=1, norm='l1')
+                        #Normalize columns
+                        #parent['Q_table'] = normalize(parent['Q_table'], axis=0, norm='l1')
                         
                         #print("Post Q table")
                         #print(parent['Q_table'])
