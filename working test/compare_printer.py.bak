@@ -6,6 +6,7 @@
 #Imports
 import matplotlib.pyplot as plt
 import json
+import numpy as np
 
 
 
@@ -43,7 +44,7 @@ for i in range(len(regular_dict["model_rewards"][0])):
     
 #Take running average
 reward_series = np.convolve(reward_series, kernel, mode='same')
-plt.plot(reward_series, color='red', marker='o', label='Baseline')
+plt.plot(reward_series[:-kernel_size], color='red', marker='o', label='Baseline')
 
 
 reward_series = []
@@ -54,12 +55,12 @@ for i in range(len(crossover_dict["model_rewards"][0])):
     
 #Take running average
 reward_series = np.convolve(reward_series, kernel, mode='same')
-plt.plot(reward_series, color='green', marker='o', label='With Modified Crossover')   
+plt.plot(reward_series[:-kernel_size], color='green', marker='o', label='With Modified Crossover')   
 
 #Other characteristics of plot
 plt.title("Epoch vs Reward, Method Comparison")
 plt.legend(loc='upper left')
 plt.xlabel("Episode")
-plt.ylabel("Episode Reward")
+plt.ylabel("Population Average Reward")
   
 plt.savefig("Comparison Plot.png") 
