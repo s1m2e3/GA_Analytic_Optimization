@@ -15,7 +15,6 @@ np.set_printoptions(suppress = True)
 import copy
 import json
 from sklearn.preprocessing import normalize
-
 import random
 
 
@@ -40,85 +39,245 @@ import smart_crossover
 #Support for RL environment.
 import gym
 import vector_grid_goal #Custom environment
+
+#------------------------------------------
+#-------------Globals----------------------
+#------------------------------------------
+input_folder = "none"
+output_folder = "output_stage_1"
+
+
 #-------------------------------------------
 #--------------Functions--------------------
 #-------------------------------------------
-def test_individual(individual):
-    #n_iterations
-    pass
-
-def create_sols(n_states,n_learners):
-
-    number_states=n_states
-    #States and rewards are
-    states=np.arange(1,number_states+1,1)
-    rewards=np.random.randint(low=0,high=5,size=len(states))
+def evaluate_Q_individual(individual, e):
+    #we initialize the first state of the episode
+    model['current_state'] = env.reset()
+    model['done'] = False
     
-    #Dictionary with states as key, rewards as value.
-    total_info = dict(zip(states,rewards))
+    #sum the rewards that the agent gets from the environment
+    model['total_episode_reward'] = 0
     
-    #Learner dictionary with index for key.
-    learned_info={}
-    for i in range(n_learners):
-        learned_info[i]={}
+    #-------------------------------------------------------
+    #--------------Individual Training/Evaluation-----------
+    #-------------------------------------------------------
+    for i in range(model['max_iter_episode']): 
         
-        #Randomly generated number of states visited with random number and then generated)
-        number_states_visited=np.random.randint(low=2,high=n_states)
+        #Epsilon random action decision
+        if np.random.uniform(0,1) < model['exploration_proba']:
+            #model['action'] = env.action_space.sample()
+            model['action'] = env.action_space.sample()
+            
+        else:
+            model['action'] = np.argmax(model['Q_table'][model['current_state'],:])
         
-        #Array of visited state numbers
-        visited_states=random.choices(states,k=number_states_visited)
+        #Run action
+        model['next_state'], model['reward'], model['done'], _ = env.step(model['action'])
         
-        #Edges exist from the known states to the next one?
-        edges_exist = [(i,i+1) for i in range(len(visited_states)-1)]
+        #---------------Record Transitions-----------------
+        nr = {}
+        nr['from_state'] = model['current_state']
+        nr['action'] = model['action']
+        nr['to_state'] = int(model['next_state'])
+        nr['reward'] = model['reward']
+        nr['done'] = model['done']
         
-        #All possible edges between visited states.
-        total_edges = [(i,j) for i in visited_states for j in visited_states]
-        edges_unknown = []
+        #print("The model is: ", model)
+        model['transition_bank'].append(copy.deepcopy(nr))
         
-        for edge in total_edges:
-            #Ignore if i and j are the same.
-            if edge[0]==edge[1]:
-                pass
-            #Append to edges unknown if not known to exist.
-            elif edge not in edges_exist:
-                edges_unknown.append(edge)
         
-        #Generate some non-existing edges?
-        number_of_non_existing = np.random.randint(low=1,high=len(edges_unknown))
         
-        #Select some random edges unknown.
-        edges_unknown = random.choices(edges_unknown,k=number_of_non_existing)
+        #-----------------------------------------------
+        #-----------Q-Table update----------------------
+        #-----------------------------------------------                
+        # We update our Q-table using the Q-learning iteration
+        model['Q_table'][model['current_state'], model['action']] = (1-model['lr']) * model['Q_table'][model['current_state'], model['action']] + model['lr']*(model['reward'] + model['gamma']*max(model['Q_table'][model['next_state'],:]))
         
-        #Get rewards for states visited.
-        rewards_obtained=[total_info[i] for i in visited_states]
+        #Update reward
+        model['total_episode_reward'] = model['total_episode_reward'] + model['reward']
         
-        #Visited state reward knowledge
-        learned_info[i]["state-reward"]=dict(zip(visited_states,rewards_obtained))
+        # If the episode is finished, we leave the for loop
+        if model['done']:
+            break
+            
+        #Update state record
+        model['current_state'] = model['next_state']
+    
+    #Update parameters that adjust on episode.
+    #We update the exploration proba using exponential decay formula 
+    model['exploration_proba'] = max(model['min_exploration_proba'], np.exp(-model['exploration_decreasing_decay']*e))
+    model['rewards_per_episode'].append(model['total_episode_reward'])
+    
+    #Update/visualize parameters
+    #Prepare partial outputs
+    if e % 1000 == 0 and e != 0:
+        print("Avg Reward at", e, "for key:", key, "is", np.mean(model['rewards_per_episode'][e-1000:e]))
+        model['plotted_rewards'].append(np.mean(model['rewards_per_episode'][e-1000:e]))
         
-        #Edges unknown
-        learned_info[i]["not_known"]=edges_unknown
+        #Reanimate when new performance numbers are in
+        animate(5)
         
-        #Return sets of state-reward and not-known
+    if e == n_episodes-1:
+        pass
+        #print("Done")
+        
+    #Update the models memory tables
+    #for record in model['transition_bank']:
+        #print(record)
+        
+    #Update failed transitions
+    #print()
+    #print("Static transitions")
+    
+    #Convert to sa_info
+    #print("sa_info")
+    #print(model['sa_info'])
+    
+    
+
+    
+    for record in model['transition_bank']:
+        i1 = record['from_state']
+        i2 = record['action']
+        #print(i1, i2)
+        #print(model['sa_info'][i1][i2])
+        #print(model['sa_info'][record['from_state'][record['action']])
+        model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
+        #print("hi")
+        #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
+    #print('sa_info')
+    #print(model['sa_info'])
+    
+    sa_table = []
+    for j in range(len(model['sa_info'])):
+        row = []
+        for k in range(len(model['sa_info'][0])):
+            if len(model['sa_info'][j][k]) > 0:
+                row.append(int(model['sa_info'][j][k]['to_state']))
+            else:
+                row.append('*')
+        sa_table.append(row)
+
+def convert_to_learned_info(parent_1, parent_2):
+    #Initialize learned info structure
+    learned_info = {}
+    
+    #Convert them to algorithm compatible forms
+    for j, model in enumerate([parent_1, parent_2]):
+        learned_info[j] = {}
+        learned_info[j]['state-reward'] = {}
+        learned_info[j]['known_states'] = []
+        learned_info[j]['not_known'] = []
+        learned_info[j]['edges_exist'] = []
+        
+        for k in range(0,n_observations):
+            existing_edges = []
+            not_known_tos = [True] * n_observations
+            known_edges_counter = 0
+            
+            for m in range(0, n_actions):
+                record = model['sa_info'][k][m]
+                if len(record) > 0:
+                    known_edges_counter += 1
+                    #Update reward record
+                    learned_info[j]['state-reward'][record['to_state']] = record['reward']
+                    
+                    #Update known states
+                    learned_info[j]['known_states'].append(k)
+                    learned_info[j]['known_states'].append(record['to_state'])
+                    
+                    
+                    #Update edges exist
+                    existing_edges.append((k,record['to_state']))
+                    
+                    not_known_tos[record['to_state']] = False
+
+                    learned_info[j]['edges_exist'].append((k,record['to_state']))
+        
+
+
+
+        #Deal with not known edges    
+        #Remove duplicate edges            
+        learned_info[j]['edges_exist'] = list(dict.fromkeys(learned_info[j]['edges_exist'])) 
+        
+        learned_info[j]['known_states'] = list(set(learned_info[j]['known_states']))
+        
+        learned_info[j]['not_known'] = [(from_state, to_state) for from_state in learned_info[j]['known_states'] for to_state in learned_info[j]['known_states'] if (from_state, to_state) not in learned_info[j]['edges_exist']]
+    
     return learned_info
+
+def create_new_Q_individuals(parent_1, parent_2, crossover):
+    #Currently replacing in place.
+    print("-"*10, "Making new individuals", "-"*10)
+    solution_path = crossover.solution
+    print("Solution path", solution_path)
+    #Get the ensemble information
+    ensemble = crossover.ensemble
+    #print("Edges", ensemble['edges'])
+    
+    
+    #For known edges, get the known transition
+    sa_path = []
+    for edge in solution_path:
+        if edge in ensemble['edges']:
+            new_sa_pair = (-1,-1)
+            print("Edge", edge, "known")
+            #Search the parents for the correct action
+            for parent in [parent_1, parent_2]:
+                for index, sa_pair in enumerate(parent['sa_info'][edge[0]]):
+                    if len(sa_pair) > 0:
+                        #print("SA Pair", sa_pair)
+                        if sa_pair['to_state'] == edge[1]:
+                            #print("Found matching sa pair", sa_pair)
+                            new_sa_pair = (edge[0], index)
+                            break
+            sa_path.append(new_sa_pair)           
+                    
+        else:
+            print("Edge", edge, "unknown")
+            sa_path.append((edge[0], env.action_space.sample()))
+            break
+    
+    print("SA_Path")
+    print(sa_path)
+    
+    #For each individual, set the path sa pairs to 1.5 times the highest Q value.
+    for parent in [parent_1, parent_2]:
+        #Calculate the highest Q value
+        max_Q = max(max(x) for x in parent['Q_table'])
+        #print("Max Q: ", max_Q)
+        #print("Pre Q table")
+        #print(parent['Q_table'])
+        for sa_pair in sa_path:
+            parent['Q_table'][sa_pair[0], sa_pair[1]] = max(max_Q * 1.2, 1)
+        
+        #Normalize matrix
+        normalize(parent['Q_table'], axis=1, norm='l1')
+        normalize(parent['Q_table'], axis=0, norm='l1')
+        
+        #print("Post Q table")
+        #print(parent['Q_table'])
+        print()
+
+        
+#-------------------------------------------
+#------------------Main---------------------
+#-------------------------------------------
 
 if __name__== "__main__":
     
     #----------------------------------------------------------------
-    #--------------------------Globals-------------------------------
+    #--------------------------Global Parameters-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 2000
+    n_episodes = 200
     ga_frequency = 20   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
+    crossover_chance = 1
     
     #Seed randoms
     random.seed(1234)
     np.random.seed(1234)
-    crossover_chance = 1
-    #save_file = "regular_json.json"
-    save_file = "crossover_json.json"
-    #regular_json.json
-    #crossover_json.json
-    #env = gym.make('FrozenLake-v1')    #If you want to try with frozen lake.
-    #env.seed(0)
+
     
     #---------------------------------------------------------------------
     #--------------------Initialize Environment---------------------------
@@ -132,16 +291,19 @@ if __name__== "__main__":
                     [0,0,0,0,0],
                     [0,1,0,0,0],
                     [0,0,0,0,0]])
-    
-    #Deterministic switch for action environment.
     env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
     
     #Make action space deterministic
-    #env.action_space.np_random.seed(seed=1)
     env.action_space.seed(2)
 
     n_observations = env.observation_space.n
     n_actions = env.action_space.n
+    
+    #Core and added actions
+    #Left: 0
+    #Down = 1
+    #Right = 2
+    #Up = 3
     
     #---------------------------------------------------------------------
     #--------------------Initialize Population---------------------------
@@ -165,12 +327,7 @@ if __name__== "__main__":
         #Keeping track for crossover model.
         model_dict[i]['sa_info'] = [list([{} for x in range(n_actions)]) for x in range(n_observations)]
         model_dict[i]['transition_bank'] = []
-        '''
-        model_dict[i]['static_transitions'] = []
-        model_dict[i]['known_rewards'] = np.full(n_observations,-1)
-        model_dict[i]['known_transitions'] = np.full((n_observations, n_observations), 0)
-        model_dict[i]['known_not_transitions'] = np.full((n_observations, n_observations), 0)
-        '''
+
     #---------------------------------------------------------
     #------------------Initialize Animation-------------------
     #---------------------------------------------------------
@@ -188,17 +345,9 @@ if __name__== "__main__":
 
     plt.ion()
     plt.show()
-    
-    
-
-    #Core and added actions
-    #Left -0
-    #Down = 1
-    #Right = 2
-    #Up = 3
 
     #----------------------------------------------------------------
-    #-------------------Main Training Loop---------------------------
+    #-------------------Training Loop--------------------------------
     #----------------------------------------------------------------
     #For number of episodes
     for e in range(n_episodes):
@@ -206,150 +355,11 @@ if __name__== "__main__":
         #For each model
         for key in model_dict.keys():
             model = model_dict[key]     #copy by reference
-            #we initialize the first state of the episode
-            model['current_state'] = env.reset()
-            model['done'] = False
             
-            #sum the rewards that the agent gets from the environment
-            model['total_episode_reward'] = 0
+            #Evaluate the individual
+            evaluate_Q_individual(model, e)
             
-            #-------------------------------------------------------
-            #--------------Individual Training/Evaluation-----------
-            #-------------------------------------------------------
-            
-            for i in range(model['max_iter_episode']): 
-                
-                #Epsilon random action decision
-                if np.random.uniform(0,1) < model['exploration_proba']:
-                    #model['action'] = env.action_space.sample()
-                    model['action'] = env.action_space.sample()
-                    
-                else:
-                    model['action'] = np.argmax(model['Q_table'][model['current_state'],:])
-                
-                #Run action
-                model['next_state'], model['reward'], model['done'], _ = env.step(model['action'])
-                
-                #---------------Record Transitions-----------------
-                nr = {}
-                nr['from_state'] = model['current_state']
-                nr['action'] = model['action']
-                nr['to_state'] = int(model['next_state'])
-                nr['reward'] = model['reward']
-                nr['done'] = model['done']
-                
-                #print("The model is: ", model)
-                model['transition_bank'].append(copy.deepcopy(nr))
-                
-                
-                
-                #-----------------------------------------------
-                #-----------Q-Table update----------------------
-                #-----------------------------------------------                
-                # We update our Q-table using the Q-learning iteration
-                model['Q_table'][model['current_state'], model['action']] = (1-model['lr']) * model['Q_table'][model['current_state'], model['action']] + model['lr']*(model['reward'] + model['gamma']*max(model['Q_table'][model['next_state'],:]))
-                
-                #Update reward
-                model['total_episode_reward'] = model['total_episode_reward'] + model['reward']
-                
-                # If the episode is finished, we leave the for loop
-                if model['done']:
-                    break
-                    
-                #Update state record
-                model['current_state'] = model['next_state']
-            
-            #Update parameters that adjust on episode.
-            #We update the exploration proba using exponential decay formula 
-            model['exploration_proba'] = max(model['min_exploration_proba'], np.exp(-model['exploration_decreasing_decay']*e))
-            model['rewards_per_episode'].append(model['total_episode_reward'])
-            
-            #Update/visualize parameters
-            #Prepare partial outputs
-            if e % 1000 == 0 and e != 0:
-                print("Avg Reward at", e, "for key:", key, "is", np.mean(model['rewards_per_episode'][e-1000:e]))
-                model['plotted_rewards'].append(np.mean(model['rewards_per_episode'][e-1000:e]))
-                
-                #Reanimate when new performance numbers are in
-                animate(5)
-                
-            if e == n_episodes-1:
-                pass
-                #print("Done")
-                
-            #Update the models memory tables
-            #for record in model['transition_bank']:
-                #print(record)
-                
-            #Update failed transitions
-            #print()
-            #print("Static transitions")
-            
-            #Convert to sa_info
-            #print("sa_info")
-            #print(model['sa_info'])
-            
-            
-
-            
-            for record in model['transition_bank']:
-                i1 = record['from_state']
-                i2 = record['action']
-                #print(i1, i2)
-                #print(model['sa_info'][i1][i2])
-                #print(model['sa_info'][record['from_state'][record['action']])
-                model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
-                #print("hi")
-                #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
-            #print('sa_info')
-            #print(model['sa_info'])
-            
-            sa_table = []
-            for j in range(len(model['sa_info'])):
-                row = []
-                for k in range(len(model['sa_info'][0])):
-                    if len(model['sa_info'][j][k]) > 0:
-                        row.append(int(model['sa_info'][j][k]['to_state']))
-                    else:
-                        row.append('*')
-                sa_table.append(row)
-            
-            '''
-            print('sa_table')
-            for entry in sa_table:
-                print(entry)
-            '''
-            
-            '''
-            for record in model['transition_bank']:
-                if record['from_state'] == record['to_state']:
-                    #print(record)
-                    model['static_transitions'].append(record)
-            
-            for record in model['transition_bank']:
-                #Update reward table
-                model['known_rewards'][record['to_state']] = record['reward']
-            
-                #Update known transitions to include states from the memories.
-                model['known_transitions'][int(record['from_state'])][int(record['to_state'])] = 1
-                
-            #Update transitions that did not work. (Note: Only works if deterministic)
-            #print("Figuring non transitions")
-            #Set all first then reset nons.
-            model['known_not_transitions'][model['known_transitions'] != 1] = 1
-            for i in range(len(model['known_transitions'])):
-                if sum(model['known_transitions'][i]) < n_actions:
-                    model['known_not_transitions'][i] = 0
-                            
-            #Clear out transition bank from the episode:
-            '''
-            '''
-            print("Transition bank")
-            for transition in model['transition_bank']:
-                print(int(transition['from_state']), int(transition['to_state']))
-            model['transition_bank'] = []
-            
-        '''
+        #Print the rewards gathered by each agent in the population
         print("-"*40)
         print("Episode:", e, "Rewards: ")        
         for key in model_dict.keys():
@@ -377,159 +387,31 @@ if __name__== "__main__":
                     parent_1 = model_dict[i]
                     parent_2 = model_dict[i-1]
                     
-                    #Initialize learned info structure
-                    learned_info = {}
+                    #Prep for Solver
+                    learned_info = convert_to_learned_info(parent_1, parent_2)
                     
-                    #Convert them to algorithm compatible forms
-                    for j, model in enumerate([parent_1, parent_2]):
-                        learned_info[j] = {}
-                        learned_info[j]['state-reward'] = {}
-                        learned_info[j]['known_states'] = []
-                        learned_info[j]['not_known'] = []
-                        learned_info[j]['edges_exist'] = []
-                        
-                        for k in range(0,n_observations):
-                            existing_edges = []
-                            not_known_tos = [True] * n_observations
-                            known_edges_counter = 0
-                            
-                            for m in range(0, n_actions):
-                                record = model['sa_info'][k][m]
-                                if len(record) > 0:
-                                    known_edges_counter += 1
-                                    #Update reward record
-                                    learned_info[j]['state-reward'][record['to_state']] = record['reward']
-                                    
-                                    #Update known states
-                                    learned_info[j]['known_states'].append(k)
-                                    learned_info[j]['known_states'].append(record['to_state'])
-                                    
-                                    
-                                    #Update edges exist
-                                    existing_edges.append((k,record['to_state']))
-                                    
-                                    not_known_tos[record['to_state']] = False
-
-                                    learned_info[j]['edges_exist'].append((k,record['to_state']))
-                        
-            
-            
-            
-                        #Deal with not known edges    
-                        #Remove duplicate edges            
-                        learned_info[j]['edges_exist'] = list(dict.fromkeys(learned_info[j]['edges_exist'])) 
-                        
-                        learned_info[j]['known_states'] = list(set(learned_info[j]['known_states']))
-                        
-                        learned_info[j]['not_known'] = [(from_state, to_state) for from_state in learned_info[j]['known_states'] for to_state in learned_info[j]['known_states'] if (from_state, to_state) not in learned_info[j]['edges_exist']]
-
-                        '''
-                        #Add not_known edges
-                        if known_edges_counter >= n_actions:
-                            pass
-                        else:
-                            print("Not known edges")
-                            
-                            print([(k,to_state) for to_state in np.array(range(n_observations))[np.array(not_known_tos)]])
-                            learned_info[j]['not_known'].extend([(k,to_state) for to_state in np.array(range(n_observations))[not_known_tos]])
-                        '''       
-
-                        
-                        '''
-                        print("Input", j)
-                        print(learned_info[j]['known_states'])
-                        print(learned_info[j]['edges_exist'])
-                        print(learned_info[j]['not_known'])
-                        print()
-                        print()
-                        '''
-                        
-                                        
-                                        
-                    
-                    #print("Learned info")
-                    #print(learned_info[0])
-                    
-                    #To avoid looping more
-                    #break
-                    
-                    #Check crossover code for direct inserting known edges.
+                    #---------------------------------
+                    #----------Run Solver-------------
+                    #---------------------------------
+                    #Start timer to time solver
                     start = datetime.now()
-                    #edges_exist
-                    #player_location
-                    #goal_location
                     
                     #print("Pre learner")
                     #print(learned_info)
                     crossover=smart_crossover.Smart_Crossover(learned_info)
-                    
                     #print("Source state", crossover.source_state)
                     #print("Sink state", crossover.sink_state)
                     
                     print("Solution time: ", datetime.now() - start)
                     
-                    #Crossover stats
-                    print("time without plots")
                     #print("number of states: ",n_states)
-                    print("n_iter:",crossover.n_iter)
-                    print("solution:",crossover.solution)
+                    #print("n_iter:",crossover.n_iter)
+                    print("Solution:",crossover.solution)
+                    print("Objective Value:",crossover.value)
                     
-                    print("value:",crossover.value)
-                    
-                    
-                    #--------------------------------------------------
-                    #-------------Create New Individuals---------------
-                    #--------------------------------------------------
-                    #Note: Currently replacing in place.
-                    print("-"*10, "Making new individuals", "-"*10)
-                    solution_path = crossover.solution
-                    print("Solution path", solution_path)
-                    #Get the ensemble information
-                    ensemble = crossover.ensemble
-                    #print("Edges", ensemble['edges'])
-                    
-                    
-                    #For known edges, get the known transition
-                    sa_path = []
-                    for edge in solution_path:
-                        if edge in ensemble['edges']:
-                            new_sa_pair = (-1,-1)
-                            print("Edge", edge, "known")
-                            #Search the parents for the correct action
-                            for parent in [parent_1, parent_2]:
-                                for index, sa_pair in enumerate(parent['sa_info'][edge[0]]):
-                                    if len(sa_pair) > 0:
-                                        #print("SA Pair", sa_pair)
-                                        if sa_pair['to_state'] == edge[1]:
-                                            #print("Found matching sa pair", sa_pair)
-                                            new_sa_pair = (edge[0], index)
-                                            break
-                            sa_path.append(new_sa_pair)           
-                                    
-                        else:
-                            print("Edge", edge, "unknown")
-                            sa_path.append((edge[0], env.action_space.sample()))
-                            break
-                    
-                    print("SA_Path")
-                    print(sa_path)
-                    
-                    #For each individual, set the path sa pairs to 1.5 times the highest Q value.
-                    for parent in [parent_1, parent_2]:
-                        #Calculate the highest Q value
-                        max_Q = max(max(x) for x in parent['Q_table'])
-                        #print("Max Q: ", max_Q)
-                        #print("Pre Q table")
-                        #print(parent['Q_table'])
-                        for sa_pair in sa_path:
-                            parent['Q_table'][sa_pair[0], sa_pair[1]] = max(max_Q * 1.2, 1)
-                        
-                        #Normalize matrix
-                        normalize(parent['Q_table'], axis=1, norm='l1')
-                        normalize(parent['Q_table'], axis=0, norm='l1')
-                        
-                        #print("Post Q table")
-                        #print(parent['Q_table'])
+                    #Create new individuals
+                    create_new_Q_individuals(parent_1, parent_2, crossover)
+
                                 
         #---------------------------------------------------------------
         #------------------------New Generation-------------------------
@@ -546,18 +428,15 @@ if __name__== "__main__":
     #-----------------------------------------------------------------------
     #------------------------End of Experiment Outputs----------------------
     #-----------------------------------------------------------------------
-    print("HI")
-    #Save as json
+    #Save model rewards as json
     json_output = {'model_rewards': []}
     
     #Print out the outputs
     for key in model_dict.keys():
         model = model_dict[key]     #copy by reference
         
-        #Save reward to json
+        #Save rewards to json
         json_output['model_rewards'].append(model['rewards_per_episode'])
-        
-        #Print out rewards.
         
         #Graph rewards
         print("Rewards", model['rewards_per_episode'])
@@ -565,14 +444,15 @@ if __name__== "__main__":
     
     plt.title("Rewards per individual")
     #plt.show()
-    plt.savefig("Rewards.png")
+    plt.savefig(os.path.join(output_folder,"Rewards.png"))
     
     #Save json to file
-    with open(save_file, 'w') as f:
+    with open(os.path.join(output_folder, "crossover.json"), 'w') as f:
         json.dump(json_output, f)
     
-    
+    #-------------------------------------------------------
     #---------------Print final models----------------------
+    #-------------------------------------------------------
     print()
     print("Current Models")
     for model_num, model in model_dict.items():

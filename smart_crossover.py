@@ -437,42 +437,55 @@ class Smart_Crossover:
             
             #print("solution_edges",g.edges)
             
-            #find cycles:
-            cycles=sorted(nx.simple_cycles(g))
-            #print("found cycles",cycles)
             
-            if len(cycles)>0:
-                for cycle in cycles:
-                #    print(cycle)
+            #------------------Run to solve cycles---------------------
+            solve_cycles = False
+            
+            if solve_cycles:
+                #find cycles:
+                cycles=sorted(nx.simple_cycles(g))
+                #print("found cycles",cycles)
+                
+                
+                
+                
+                if len(cycles)>0:
+                    for cycle in cycles:
+                    #    print(cycle)
+                        
+                        if cycle not in self.cycle:
+                            self.cycle.append(cycle)
+                            #print("added cycle")
+                    #print("found cycles:",self.cycle)
+                    return list(g.edges),cycles
+                
+                else: 
+                    '''
+                    nodes = g.nodes
+                    new_colors = []
+                    color = self.color_nodes(g)
                     
-                    if cycle not in self.cycle:
-                        self.cycle.append(cycle)
-                        #print("added cycle")
-                #print("found cycles:",self.cycle)
-                return list(g.edges),cycles
-            
-            else: 
-                '''
-                nodes = g.nodes
-                new_colors = []
-                color = self.color_nodes(g)
-                
-                color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
-                color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
-                edges_color = self.color_edges(g)
-                for node in nodes:
-                    new_list=(list(self.graph.nodes))
-                    new_colors.append(color[new_list.index(node)])
-                
-                plt.figure(figsize=(20,10))
-                nx.draw(g,with_labels=True)
-                plt.show()
-                '''
-                
+                    color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
+                    color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
+                    edges_color = self.color_edges(g)
+                    for node in nodes:
+                        new_list=(list(self.graph.nodes))
+                        new_colors.append(color[new_list.index(node)])
+                    
+                    plt.figure(figsize=(20,10))
+                    nx.draw(g,with_labels=True)
+                    plt.show()
+                    '''
+                    
+                    ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
+                    ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
+                    return ordered_path,cycles
+                    
+            else:
+                cycles = []
                 ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
                 ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
-                return ordered_path,cycles
-
+                return ordered_path,cycles                
 
             
 
