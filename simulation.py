@@ -23,50 +23,38 @@ class processor:
         self.env = env
         self.id = id
         self.type = proc_type
-        self.job = 0
         self.queue =[]
         self.resource = resource
-        self.broke = False
-        self.process = self.env.process(self.work())
+        self.process = self.env.process(self.work(self.queue,self.resource))
+        self.total_tasks = 0
     
     
     def assign(self,job):
         
-        if self.job ==0:
-            self.job=job
-
-        else:
-            self.queue.append(job)
-
+        self.queue.append(job)
+            
         if job.processor == 0:
             job.processor = self.id
     
-    def work(self):
+    def work(self,queue,resource):
 
-        while True:
-            done_in = time_per_machine()
-            print(done_in)
-            while done_in:
-                try:
-                    # Working on the part
-                    start = self.env.now
+        try:
+            for job in queue:
+                queue = queue[1:]
+                starts = self.env.now
+                done_in = time_per_machine()
+                #print('%f seconds for job: %i at machine %i' % (done_in,job.id, self.id))
+                with resource.request() as req:
+                    yield req
                     yield self.env.timeout(done_in)
-                    done_in = 0 # Set to 0 to exit while loop.
-                    print("machine with id :",self.id)
-                    print("finished job :",self.job.id)
-                    if len(self.queue)>0:
-                        self.job=self.queue[0]
-                    
-                    
-                except simpy.Interrupt:
+                    finished = self.env.now
+                    #print('%7.4f job: %i finishes at machine %i' % (finished,job.id, self.id))
+                    self.total_tasks += 1
+        
+        except simpy.Interrupt:
                     print("except")
-                    done_in -= self.env.now - start  # How much time left?
+                    
 
-'''
-Create simulator of machine shop. Receives schedule, in a sparse matrix.
-Number of rows for schedule is the number of processors(machines).
-Number of columns is the number of jobs, x_ij=1 means job j  is assigned to machine i 
-'''
 
 class simulator:
 
@@ -83,23 +71,18 @@ class simulator:
         self.processors[action[0]].assign(self.jobs[action[1]])
     
     def simulation_check(self):
-        check = False
-        tasks = []
+        accumulated = 0
         for processor in self.processors:
-            if processor.job==0:
-                tasks.append(0)
-            else:
-                tasks.append(1)
-        if min(tasks)!=0:
-            check=True
-        return check
+            accumulated +=processor.total_tasks
+        return accumulated == self.n_jobs
     
     def run(self):
-        
-        if self.simulation_check():
+        finished  = False
+        while not finished:
             self.env.step()
-           # print(self.env.active_process)
 
+            finished = self.simulation_check()
+        
 
 ## create jobs,machines and simulation
             
@@ -108,12 +91,10 @@ n_machines = 3
 jobs = np.arange(n_jobs)
 machines = np.arange(n_machines)
 actions = [(random.choice(machines),job_i) for job_i in jobs]
-print(actions)
-## create tuple pairs
 simulation = simulator(n_jobs,n_machines)
 for action in actions:
     simulation.assign(action)
-    simulation.run()
+simulation.run()
 
 
         
