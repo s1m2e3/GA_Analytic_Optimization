@@ -357,14 +357,12 @@ class Smart_Crossover:
         #Extra computational time from making multiple adjacency matrices?
         adj_matrix = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
         #create variables
-        x=cvx.Variable(adj_matrix.shape, boolean=True)
+        x=cvx.Variable(adj_matrix.shape)
         #theta = cvx.Variable(adj_matrix.shape[0],boolean=True)
 
         #big number M
         #m=1000
 
-
-        
         #create constraints, x is binary
         constraints = [x<=1,x>=0]
         #constraints += [theta<=1,x>=0]
@@ -412,12 +410,12 @@ class Smart_Crossover:
 
         #create obj_function 
         problem=cvx.Problem(cvx.Maximize(cvx.sum(cvx.multiply(rew_matrix,x))),constraints)
-        
+        problem.solve("GLPK")
         #solve
         #for writing model//works when unimodular
-        #problem.solve("CPLEX",cplex_filename="model.lp")
+        
         #for solving MIP
-        problem.solve("GLPK_MI")
+        #problem.solve("GLPK_MI")
         
         if problem.status == "infeasible":
             for cons in constraints:
@@ -432,6 +430,7 @@ class Smart_Crossover:
                 for col_index in range(len(x.value)):
                     if x.value[row_index][col_index]==1:
                         new_pairs.append((list(self.graph.nodes)[row_index],list(self.graph.nodes)[col_index]))
+            print(x.value)
             g=nx.DiGraph()
             g.add_edges_from(new_pairs)
             
@@ -445,9 +444,6 @@ class Smart_Crossover:
                 #find cycles:
                 cycles=sorted(nx.simple_cycles(g))
                 #print("found cycles",cycles)
-                
-                
-                
                 
                 if len(cycles)>0:
                     for cycle in cycles:

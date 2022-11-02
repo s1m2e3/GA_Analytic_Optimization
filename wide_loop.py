@@ -270,8 +270,8 @@ if __name__== "__main__":
     #----------------------------------------------------------------
     #--------------------------Global Parameters-------------------------------
     #----------------------------------------------------------------
-    n_episodes = 200
-    ga_frequency = 20   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
+    n_episodes = 2001
+    ga_frequency = 200   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
     crossover_chance = 1
     
     #Seed randoms
