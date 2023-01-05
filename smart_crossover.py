@@ -258,16 +258,37 @@ class Smart_Crossover:
         #------------------------------------------------------------
         #randomize source
         choose_learner = random.choice(list(self.learned_info))
-        source_state = list(self.learned_info[choose_learner]["state-reward"])[0]
+        #source_state = list(self.learned_info[choose_learner]["state-reward"])[0]
         #print("source learner")
         #print(list(self.learned_info[choose_learner]["state-reward"]))
         #print(list(self.learned_info[choose_learner]["state-reward"])[0])
         #randomize sink
         #!!! Will sometimes cause infinite loop
+        
+        #------------------------------
+        #Now using first and lasts from recorded runs.
+        #source_state = self.learned_info[random.choice(list(self.learned_info))]['prev_run'][0][0]
+        #sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_run'][-1][0]
+        source_state = self.learned_info[random.choice(list(self.learned_info))]['prev_first']
+        
+        sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_last']
+        print("OG Source", source_state, "OG sink", sink_state)
+        
+        if sink_state == source_state:
+            #Choose a random one
+            sink_state = source_state
+            while sink_state == source_state:
+                sink_state = random.choice(self.ensemble['known_states'])
+        
+        print("Source", source_state, "sink", sink_state)
+        
+        '''
         sink_state = source_state
         while sink_state == source_state:
             choose_learner = random.choice(list(self.learned_info))
             sink_state = list(self.learned_info[choose_learner]["state-reward"])[-1]
+        '''
+
             
         #print("sink learner")
         #print(list(self.learned_info[choose_learner]["state-reward"]))

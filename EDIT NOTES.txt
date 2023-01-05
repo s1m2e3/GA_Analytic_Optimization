@@ -1,0 +1,9 @@
+First state doesn't seem to make it into known states. Checking self.prep()
+
+It's because the first node isn't in state-reward?
+Write up how it works? Ensure first node presence.
+Add more visualization?
+
+Continue debugging basic_Q_optim
+
+Remember most recent path?
