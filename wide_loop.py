@@ -1,5 +1,5 @@
 #Kyle Norland, using code from Sam
-#10/10/22
+#10/10/22, modified 12/1/22
 
 
 #----------------------------------------------------
@@ -11,12 +11,13 @@ warnings.filterwarnings(action='ignore', category=FutureWarning)
 
 #General Imports
 import numpy as np
+rng = np.random.default_rng(12345)
 np.set_printoptions(suppress = True)
 import copy
 import json
 from sklearn.preprocessing import normalize
 import random
-
+import time
 
 from datetime import datetime
 import sys
@@ -40,16 +41,56 @@ import smart_crossover
 import gym
 import vector_grid_goal #Custom environment
 
-#------------------------------------------
-#-------------Globals----------------------
-#------------------------------------------
-input_folder = "none"
-output_folder = "output_stage_1"
+#Visualizer
+import output_processor
 
 
-#-------------------------------------------
-#--------------Functions--------------------
-#-------------------------------------------
+#--------------------------------------------------
+#---------------------Functions--------------------
+#--------------------------------------------------
+class MyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(MyEncoder, self).default(obj)
+
+#-------------------State Discretization------------------
+def get_discrete_state(self, state, bins, obsSpaceSize):
+    #https://github.com/JackFurby/CartPole-v0
+    stateIndex = []
+    for i in range(obsSpaceSize):
+        stateIndex.append(np.digitize(state[i], bins[i]) - 1) # -1 will turn bin into index
+    return tuple(stateIndex)
+
+def init_environment(env_config):
+    env_name = env_config['env_name']
+    
+    if env_name == 'FrozenLake-v1':
+        env = gym.make("FrozenLake-v1", desc=None, map_name="4x4", is_slippery=False)
+        #env = gym.make("FrozenLake-v1", is_slippery=False)
+    
+    if env_name == 'vector_grid_goal':
+        grid_dims = (5,5)
+        player_location = (0,0)
+        goal_location = (4,4)
+        custom_map = np.array([[0,0,0,0,0],
+                                [0,1,0,0,0],
+                                [0,0,0,1,0],
+                                [0,0,0,0,1],
+                                [0,0,1,0,0]])
+                                
+    
+        env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=custom_map)
+    
+    
+    return env
+
+#GA Evaluations and Custom for Experiment
 def evaluate_Q_individual(individual, e):
     #we initialize the first state of the episode
     model['current_state'] = env.reset()
@@ -61,6 +102,7 @@ def evaluate_Q_individual(individual, e):
     #-------------------------------------------------------
     #--------------Individual Training/Evaluation-----------
     #-------------------------------------------------------
+    #print("max iters:", model['max_iter_episode'])
     for i in range(model['max_iter_episode']): 
         
         #Epsilon random action decision
@@ -74,9 +116,11 @@ def evaluate_Q_individual(individual, e):
         #Run action
         model['next_state'], model['reward'], model['done'], _ = env.step(model['action'])
         
+        #--------------------------------------------------
         #---------------Record Transitions-----------------
+        #--------------------------------------------------
         nr = {}
-        nr['from_state'] = model['current_state']
+        nr['from_state'] = int(model['current_state'])
         nr['action'] = model['action']
         nr['to_state'] = int(model['next_state'])
         nr['reward'] = model['reward']
@@ -84,7 +128,6 @@ def evaluate_Q_individual(individual, e):
         
         #print("The model is: ", model)
         model['transition_bank'].append(copy.deepcopy(nr))
-        
         
         
         #-----------------------------------------------
@@ -103,39 +146,19 @@ def evaluate_Q_individual(individual, e):
         #Update state record
         model['current_state'] = model['next_state']
     
-    #Update parameters that adjust on episode.
-    #We update the exploration proba using exponential decay formula 
+
+    #------------------------End Of Episode---------------------------
+    #Convert model states to int
+    #model['current_state'] = int(model['current_state'])
+    #model['next_state'] = int(model['next_state'])
+    
+    #Decay Exploration Probability
     model['exploration_proba'] = max(model['min_exploration_proba'], np.exp(-model['exploration_decreasing_decay']*e))
+    
+    #Update total rewards
     model['rewards_per_episode'].append(model['total_episode_reward'])
     
-    #Update/visualize parameters
-    #Prepare partial outputs
-    if e % 1000 == 0 and e != 0:
-        print("Avg Reward at", e, "for key:", key, "is", np.mean(model['rewards_per_episode'][e-1000:e]))
-        model['plotted_rewards'].append(np.mean(model['rewards_per_episode'][e-1000:e]))
-        
-        #Reanimate when new performance numbers are in
-        animate(5)
-        
-    if e == n_episodes-1:
-        pass
-        #print("Done")
-        
-    #Update the models memory tables
-    #for record in model['transition_bank']:
-        #print(record)
-        
-    #Update failed transitions
-    #print()
-    #print("Static transitions")
-    
-    #Convert to sa_info
-    #print("sa_info")
-    #print(model['sa_info'])
-    
-    
-
-    
+    #----------------------Convert Transitions into SA knowledge Table--------------------
     for record in model['transition_bank']:
         i1 = record['from_state']
         i2 = record['action']
@@ -148,6 +171,11 @@ def evaluate_Q_individual(individual, e):
     #print('sa_info')
     #print(model['sa_info'])
     
+    #-----------Clear transition bank after information has been added-------------------------
+    model['transition_bank'] = []
+    #print("Size of transition_bank: ", len(model['transition_bank']))
+    
+    '''
     sa_table = []
     for j in range(len(model['sa_info'])):
         row = []
@@ -157,6 +185,7 @@ def evaluate_Q_individual(individual, e):
             else:
                 row.append('*')
         sa_table.append(row)
+    '''
 
 def convert_to_learned_info(parent_1, parent_2):
     #Initialize learned info structure
@@ -260,6 +289,78 @@ def create_new_Q_individuals(parent_1, parent_2, crossover):
         #print(parent['Q_table'])
         print()
 
+
+def gen_exp_ga_frequency(default_run):
+    #Experiment Objective: See effect of ga_frequency
+    #Experiment Designer: Kyle Norland
+    #Designed 11/22
+    
+    ga_frequency_settings = [500, 20000]#[50, 100, 250, 500, 1000, 20000] #[5,10,25,50,100,200,300,400,500]
+    random_seeds = rng.integers(low=0, high=9999, size=5)
+        
+    new_experiment = {'runs':[]}
+    new_experiment['generation_time']= time.time()
+    new_experiment['variables'] = ['ga_frequency']
+    new_experiment['experiment_name'] = "changing_ga_frequency"
+
+    color_list = ['green', 'blue', 'red', 'yellow', 'orange', 'brown']
+    color_counter = 0
+    
+    for ga_frequency in ga_frequency_settings:
+        for seed in random_seeds:
+            new_run = copy.deepcopy(default_run)
+            new_run['ga_frequency'] = ga_frequency
+            new_run['np_seed'] = seed
+            new_run['env_seed'] = seed
+            new_run['python_seed'] = seed
+            new_run['color'] = color_list[color_counter]
+            new_run['label'] = "".join([i + ': ' + str(new_run[i]) + ' ' for i in new_experiment['variables']])
+            print('Settings: ', new_run['label'])
+            
+            #Add run to experiment
+            new_experiment['runs'].append(copy.deepcopy(new_run))
+        
+        color_counter += 1   
+    print("Returning new experiment")
+    return new_experiment              
+
+def gen_episode_length(default_run):
+    #Experiment Objective: See effect of episode length
+    #Experiment Designer: Kyle Norland
+    #Designed 12-9-22
+    
+    ga_frequency_settings = [500, 20000]#[50, 100, 250, 500, 1000, 20000] #[5,10,25,50,100,200,300,400,500]
+    episode_lengths = [5, 10, 20]
+    random_seeds = rng.integers(low=0, high=9999, size=2)
+        
+    new_experiment = {'runs':[]}
+    new_experiment['generation_time']= time.time()
+    new_experiment['variables'] = ['ga_frequency', 'max_iter_episode']
+    new_experiment['experiment_name'] = "changing_episode_length"
+
+    color_list = ['green', 'blue', 'red', 'yellow', 'orange', 'brown']
+    color_counter = 0
+    
+    for ga_frequency in ga_frequency_settings:
+        for episode_length in episode_lengths:
+            for seed in random_seeds:
+                new_run = copy.deepcopy(default_run)
+                new_run['ga_frequency'] = ga_frequency
+                new_run['max_iter_episode'] = episode_length
+                new_run['np_seed'] = seed
+                new_run['env_seed'] = seed
+                new_run['python_seed'] = seed
+                new_run['color'] = color_list[color_counter]
+                print(new_run['color'])
+                new_run['label'] = "".join([i + ': ' + str(new_run[i]) + ' ' for i in new_experiment['variables']])
+                print('Settings: ', new_run['label'])
+                
+                #Add run to experiment
+                new_experiment['runs'].append(copy.deepcopy(new_run))
+        
+            color_counter += 1
+    print("Returning new experiment")
+    return new_experiment     
         
 #-------------------------------------------
 #------------------Main---------------------
@@ -267,194 +368,247 @@ def create_new_Q_individuals(parent_1, parent_2, crossover):
 
 if __name__== "__main__":
     
-    #----------------------------------------------------------------
-    #--------------------------Global Parameters-------------------------------
-    #----------------------------------------------------------------
-    n_episodes = 2001
-    ga_frequency = 200   #How often the GA algorithm runs. May want to add in a parameter concerning the age of each model.
-    crossover_chance = 1
+    #------------------------------------------
+    #--------------Generate Experiment---------
+    #------------------------------------------    
+    #Default Run Settings
+    default_run = {}
+    #default_run['env'] = 'FrozenLake-v1'
+    default_run['env'] = 'vector_grid_goal'
+    default_run['n_episodes'] = 4000
+    default_run['ga_frequency'] = 200
+    default_run['crossover_chance'] = 1
+    default_run['mutation_prob'] = 0.2 
+    default_run['python_seed'] = 1234
+    default_run['np_seed'] = 1234
+    default_run['env_seed'] = 1234
+    default_run['grid_dims'] = (5,5)
+    default_run['player_location'] = (0,0)
+    default_run['goal_location'] = (4,4)
+    default_run['map'] = np.array([[0,1,1,1,0],
+                                    [0,0,1,0,0],
+                                    [0,0,0,0,0],
+                                    [0,1,0,0,0],
+                                    [0,0,0,0,0]])
+    default_run['max_iter_episode'] = 10      #maximum of iteration per episode
+    default_run['exploration_proba'] = 1    #initialize the exploration probability to 1
+    default_run['exploration_decreasing_decay'] = 0.0001       #exploration decreasing decay for exponential decreasing
+    default_run['min_exploration_proba'] = 0.01
+    default_run['gamma'] = 0.99            #discounted factor
+    default_run['lr'] = 0.1                 #learning rate 
+    default_run['pop_size'] = 2
     
-    #Seed randoms
-    random.seed(1234)
-    np.random.seed(1234)
-
+    default_run['output_dict'] = {}
     
-    #---------------------------------------------------------------------
-    #--------------------Initialize Environment---------------------------
-    #---------------------------------------------------------------------
-    grid_dims = (5,5)
-    player_location = (0,0)
-    goal_location = (4,4)
+    #Env Config
+    default_run['env_config'] = {}
+    #default_run['env_config']['env_name'] = 'FrozenLake-v1'
+    default_run['env_config']['env_name'] = default_run['env']
+    #default_run['env_config']['env_name']
     
-    map = np.array([[0,1,1,1,0],
-                    [0,0,1,0,0],
-                    [0,0,0,0,0],
-                    [0,1,0,0,0],
-                    [0,0,0,0,0]])
-    env = vector_grid_goal.CustomEnv(grid_dims=grid_dims, player_location=player_location, goal_location=goal_location, map=map)
+    #Output Path
+    default_run['output_path'] = 'GA_output'
+    if not os.path.exists(default_run['output_path']):
+        os.makedirs(default_run['output_path'], exist_ok = True)    
     
-    #Make action space deterministic
-    env.action_space.seed(2)
-
-    n_observations = env.observation_space.n
-    n_actions = env.action_space.n
+    #Generate or Load Experiment
+    folder_mode = False
+    generate_mode = True
     
-    #Core and added actions
-    #Left: 0
-    #Down = 1
-    #Right = 2
-    #Up = 3
+    experiment = {'runs': []}
     
-    #---------------------------------------------------------------------
-    #--------------------Initialize Population---------------------------
-    #--------------------------------------------------------------------
-    #Generate population
-    model_dict = {}
-    for i in range(2):
-        model_dict[i] = {}
-        #model_dict[i]['n_episodes'] = 20000      #number of episode we will run
-        model_dict[i]['max_iter_episode'] = 10  #maximum of iteration per episode
-        model_dict[i]['exploration_proba'] = 0.5   #initialize the exploration probability to 1
-        model_dict[i]['exploration_decreasing_decay'] = 0.001    #exploartion decreasing decay for exponential decreasing
-        model_dict[i]['min_exploration_proba'] = 0.01    # minimum of exploration proba
-        model_dict[i]['gamma'] = 0.99            #discounted factor
-        model_dict[i]['lr'] = 0.1                 #learning rate
-        model_dict[i]['Q_table'] = np.zeros((n_observations,n_actions))
-        #model_dict[i]['total_rewards_episode'] = list()
-        model_dict[i]['rewards_per_episode'] = []
-        model_dict[i]['plotted_rewards'] = []
+    if generate_mode:
+        #Generate experiment
+        #experiment = copy.deepcopy(gen_epsilon_exist(default_run))
+        #experiment = copy.deepcopy(gen_exp_ga_frequency(default_run))
+        experiment = copy.deepcopy(gen_episode_length(default_run))
+        #experiment = copy.deepcopy(epsilon_switching(default_run))
+        #Save experiment
+        experiment_name = str(experiment['generation_time']) + '.json'
+        with open(os.path.join('saved_experiments', experiment_name), 'w') as f:
+            json.dump(experiment, f, cls=MyEncoder)
         
-        #Keeping track for crossover model.
-        model_dict[i]['sa_info'] = [list([{} for x in range(n_actions)]) for x in range(n_observations)]
-        model_dict[i]['transition_bank'] = []
+    #----------------------------------------------------
+    #---------------Run the Experiment-------------------
+    #----------------------------------------------------
+    for run in experiment['runs']:
+        #Start Timer
+        print("Run")
+        print(run)
+        run['run_start_time'] = time.time()
 
-    #---------------------------------------------------------
-    #------------------Initialize Animation-------------------
-    #---------------------------------------------------------
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1,1,1)
-
-    def animate(i):
-        ax1.clear()
-        for key in model_dict.keys():
-            ax1.plot(model_dict[key]['plotted_rewards'])
-        #for reward_set in plotted_rewards:
-            #ax1.plot(reward_set)
-        plt.draw()
-        plt.pause(0.001)
-
-    plt.ion()
-    plt.show()
-
-    #----------------------------------------------------------------
-    #-------------------Training Loop--------------------------------
-    #----------------------------------------------------------------
-    #For number of episodes
-    for e in range(n_episodes):
+        #Set random seeds
+        random.seed(run['python_seed'])
+        np.random.seed(run['np_seed'])
         
-        #For each model
+        #Initialize environment
+        env = init_environment(run['env_config'])
+        
+        #Env seed for action space
+        env.action_space.np_random.seed(run['env_seed'])        
+
+        #Grab observation and action space for initializations
+        n_observations = env.observation_space.n
+        n_actions = env.action_space.n
+        
+
+
+        #--------------------------------------------------------------------
+        #--------------------Initialize Genetic Algorithm--------------------
+        #--------------------------------------------------------------------
+        #Generate population
+        model_dict = {}
+        for i in range(run['pop_size']):
+            model_dict[i] = {}
+            #Copy some of the run parameters for each member of the population.
+            for entry in ['max_iter_episode', 'exploration_proba', 'exploration_decreasing_decay', 'min_exploration_proba', 'gamma', 'lr']:
+                model_dict[i][entry] = run[entry]
+            '''
+            model_dict[i]['max_iter_episode'] = 10  #maximum of iteration per episode
+            model_dict[i]['exploration_proba'] = 0.5   #initialize the exploration probability to 1
+            model_dict[i]['exploration_decreasing_decay'] = 0.001    #exploartion decreasing decay for exponential decreasing
+            model_dict[i]['min_exploration_proba'] = 0.01    # minimum of exploration proba
+            model_dict[i]['gamma'] = 0.99            #discounted factor
+            model_dict[i]['lr'] = 0.1                 #learning rate
+            '''
+            #Initialize Q table
+            model_dict[i]['Q_table'] = np.zeros((n_observations,n_actions))
+            #model_dict[i]['total_rewards_episode'] = list()
+
+            #Extra Information Saved
+            model_dict[i]['sa_info'] = [list([{} for x in range(n_actions)]) for x in range(n_observations)]
+            model_dict[i]['transition_bank'] = []
+            
+            #Outputs
+            model_dict[i]['rewards_per_episode'] = []
+            model_dict[i]['plotted_rewards'] = []
+
+        
+        #----------------------------------------------------------------
+        #-------------------Training Loop--------------------------------
+        #----------------------------------------------------------------
+        #For number of episodes
+        for e in range(run['n_episodes']):
+            
+            #-----------Evaluate Each Individual------------------
+            for key, value in model_dict.items():
+                model = value     #copy by reference
+                
+                #Evaluate the individual
+                evaluate_Q_individual(model, e)
+                
+            #----------Print Population Performance every # of episodes---
+            if e % 100 == 0:
+                print("-"*40)
+                print("Episode:", e, "Rewards: ")        
+                for key, value in model_dict.items():
+                    model = value
+                    #Print reward
+                    print(key, ":", model['total_episode_reward'])
+                print("-"*40)            
+                
+            #-------------------------------------------------------------
+            #--------------------GA Procedure-----------------------------
+            #-------------------------------------------------------------
+            #If time to run the ga
+            if e % run['ga_frequency'] == 0 and e != 0:
+                
+                mutprb = run['mutation_prob']       #Mutation probability
+                
+                #Full crossover without elites (TODO: Alternate crossover structure)
+                for i in range(1, len(model_dict)):
+                    #Apply crossover if less than crossover probability
+                    if random.random() < run['crossover_chance']:
+                        #Format models correctly and enter into the crossover function.
+                        parent_1 = model_dict[i]
+                        parent_2 = model_dict[i-1]
+                        
+                        #Prep for Solver
+                        learned_info = convert_to_learned_info(parent_1, parent_2)
+                        
+                        #---------------------------------
+                        #----------Run Solver-------------
+                        #---------------------------------
+                        #Start timer to time solver
+                        start = datetime.now()
+                        
+                        #Run the crossover
+                        crossover=smart_crossover.Smart_Crossover(learned_info)
+                        
+                        print("Solution time: ", datetime.now() - start)
+
+                        print("Solution:",crossover.solution)
+                        #print("Objective Value:",crossover.value)
+                        
+                        #Update individuals
+                        create_new_Q_individuals(parent_1, parent_2, crossover)
+
+
+        #-----------------------------------------------------------------------
+        #------------------------End of Run Outputs----------------------
+        #-----------------------------------------------------------------------
+        #Save details to run.
+        #Save model rewards as json
+        run['models'] = copy.deepcopy(model_dict)
+        
+    #--------------------------------------------------------
+    #--------------End of Experiment Processing--------------
+    #--------------------------------------------------------
+    
+    #Save
+    #save_name = str(round(time.time())) + "_json_output.json"
+    
+    out_folder_name = str(experiment['generation_time']) + '_experiment'
+    os.makedirs(os.path.join('results', out_folder_name), exist_ok=True)
+    
+    save_name = "json_output.json"
+    with open(os.path.join('results', out_folder_name, save_name ), 'w') as f:
+        json.dump(experiment, f, cls=MyEncoder)    
+    
+    #Save a text file with the changed variables
+    save_name = '+'.join(experiment['variables'])
+    file_path = os.path.join('results', out_folder_name, save_name)
+    with open(file_path, 'w') as f:
+        pass
+
+    print("Processing Visuals")
+    output_processor.process_folders(latest=True)
+    
+    
+    
+    
+    
+    
+    
+        
+    '''
+        json_output = {'model_rewards': []}
+        
+        #Print out the outputs
         for key in model_dict.keys():
             model = model_dict[key]     #copy by reference
             
-            #Evaluate the individual
-            evaluate_Q_individual(model, e)
+            #Save rewards to json
+            json_output['model_rewards'].append(model['rewards_per_episode'])
             
-        #Print the rewards gathered by each agent in the population
-        print("-"*40)
-        print("Episode:", e, "Rewards: ")        
-        for key in model_dict.keys():
-            model = model_dict[key]
-            #Print reward
-            print(key, ":", model['total_episode_reward'])
-        print("-"*40)            
-            
-        #-------------------------------------------------------------
-        #--------------------GA Procedure-----------------------------
-        #-------------------------------------------------------------
-        #If time to run the ga
-        if e % ga_frequency == 0: # and e != 0:
-            
-            mutprb = 0.05   #Mutation probability
-            cxprb = crossover_chance    #Crossover probability
-            
-            #Different ways of selecting which individuals to crossover. But can do crossover based on sequential.
-            #Currently replacing both parents with children.
-            #Dictionary is i indexed
-            for i in range(1, len(model_dict)):
-                #Apply crossover if less than crossover probability
-                if random.random() < cxprb:
-                    #Format models correctly and enter into the crossover function.
-                    parent_1 = model_dict[i]
-                    parent_2 = model_dict[i-1]
-                    
-                    #Prep for Solver
-                    learned_info = convert_to_learned_info(parent_1, parent_2)
-                    
-                    #---------------------------------
-                    #----------Run Solver-------------
-                    #---------------------------------
-                    #Start timer to time solver
-                    start = datetime.now()
-                    
-                    #print("Pre learner")
-                    #print(learned_info)
-                    crossover=smart_crossover.Smart_Crossover(learned_info)
-                    #print("Source state", crossover.source_state)
-                    #print("Sink state", crossover.sink_state)
-                    
-                    print("Solution time: ", datetime.now() - start)
-                    
-                    #print("number of states: ",n_states)
-                    #print("n_iter:",crossover.n_iter)
-                    print("Solution:",crossover.solution)
-                    print("Objective Value:",crossover.value)
-                    
-                    #Create new individuals
-                    create_new_Q_individuals(parent_1, parent_2, crossover)
-
-                                
-        #---------------------------------------------------------------
-        #------------------------New Generation-------------------------
-        #---------------------------------------------------------------
-        '''
+            #Graph rewards
+            print("Rewards", model['rewards_per_episode'])
+            plt.plot(model['rewards_per_episode'])
+        
+        plt.title("Rewards per individual")
+        #plt.show()
+        plt.savefig(os.path.join(output_folder,"Rewards.png"))
+        
+        #Save json to file
+        with open(os.path.join(output_folder, "crossover.json"), 'w') as f:
+            json.dump(json_output, f)
+        
+        #-------------------------------------------------------
+        #---------------Print final models----------------------
+        #-------------------------------------------------------
+        print()
         print("Current Models")
         for model_num, model in model_dict.items():
             print("Model: ", model_num)
-            for row_number, row in enumerate(model['Q_table']):
-                print(row_number, ":", np.argmax(row))
-            #print(model['Q_table'])
-        '''         
-
-    #-----------------------------------------------------------------------
-    #------------------------End of Experiment Outputs----------------------
-    #-----------------------------------------------------------------------
-    #Save model rewards as json
-    json_output = {'model_rewards': []}
-    
-    #Print out the outputs
-    for key in model_dict.keys():
-        model = model_dict[key]     #copy by reference
-        
-        #Save rewards to json
-        json_output['model_rewards'].append(model['rewards_per_episode'])
-        
-        #Graph rewards
-        print("Rewards", model['rewards_per_episode'])
-        plt.plot(model['rewards_per_episode'])
-    
-    plt.title("Rewards per individual")
-    #plt.show()
-    plt.savefig(os.path.join(output_folder,"Rewards.png"))
-    
-    #Save json to file
-    with open(os.path.join(output_folder, "crossover.json"), 'w') as f:
-        json.dump(json_output, f)
-    
-    #-------------------------------------------------------
-    #---------------Print final models----------------------
-    #-------------------------------------------------------
-    print()
-    print("Current Models")
-    for model_num, model in model_dict.items():
-        print("Model: ", model_num)
-        print(model['Q_table'])
+            print(model['Q_table'])
+    '''

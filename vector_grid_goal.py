@@ -21,8 +21,8 @@ from gym.spaces import Box, Discrete
 
 
 #--------------Global Controls---------------------
-goal_reward_val = 10
-regular_reward_val = 1
+goal_reward_val = 20
+regular_reward_val = 10
 step_cost = 0
 
 class CustomEnv(Env):
@@ -117,10 +117,10 @@ class CustomEnv(Env):
         player_move_x = 0
         player_move_y = 0
         
-        if action == 0: player_move_x = -1
-        elif action == 1: player_move_y = -1
-        elif action == 2: player_move_x = +1
-        elif action == 3: player_move_y = +1
+        if action == 0: player_move_x = -1  #Left
+        elif action == 1: player_move_y = -1 #Up
+        elif action == 2: player_move_x = +1 #Right
+        elif action == 3: player_move_y = +1 #Down
         else: print("No action")
         
         self.player_x = self.player_x + player_move_x
