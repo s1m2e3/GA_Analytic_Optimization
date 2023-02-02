@@ -7,15 +7,21 @@
 #----------------IMPORTS-----------------------------
 #----------------------------------------------------
 <<<<<<< HEAD
+<<<<<<< HEAD
 import warnings #Ignore future warnings
 warnings.filterwarnings(action='ignore', category=FutureWarning)
 
 =======
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #Ignore future warnings
 import warnings
 warnings.filterwarnings(action='ignore', category=FutureWarning)
 
 #General Imports
+<<<<<<< HEAD
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+=======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 import numpy as np
 rng = np.random.default_rng(12345)
@@ -25,6 +31,7 @@ import json
 from sklearn.preprocessing import normalize
 import random
 import time
+<<<<<<< HEAD
 <<<<<<< HEAD
 from datetime import datetime
 import sys
@@ -104,6 +111,8 @@ def q_to_path(env, Q_table, test_length=20):
 
 
 =======
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 from datetime import datetime
 import sys
@@ -129,6 +138,9 @@ import vector_grid_goal #Custom environment
 
 #Visualizer
 import output_processor
+<<<<<<< HEAD
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+=======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 
@@ -141,7 +153,11 @@ run = {}
 run['env'] = 'vector_grid_goal'
 run['n_episodes'] = 5000
 <<<<<<< HEAD
+<<<<<<< HEAD
 run['ga_frequency'] = 50
+=======
+run['ga_frequency'] = 100
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 run['ga_frequency'] = 100
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -157,9 +173,15 @@ run['map'] = np.array([[0,0,0,0,0],
                         [0,1,0,0,0],
                         [0,0,0,1,0],
 <<<<<<< HEAD
+<<<<<<< HEAD
                         [0,0,0,0,1],
                         [0,0,1,0,0]])
 run['max_iter_episode'] = 20      #maximum of iteration per episode
+=======
+                        [0,1,0,0,1],
+                        [0,0,0,0,0]])
+run['max_iter_episode'] = 10      #maximum of iteration per episode
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
                         [0,1,0,0,1],
                         [0,0,0,0,0]])
@@ -172,9 +194,12 @@ run['gamma'] = 0.90            #discounted factor
 run['lr'] = 0.1                 #learning rate 
 run['pop_size'] = 1
 <<<<<<< HEAD
+<<<<<<< HEAD
 run['q_visuals'] = False
 run['q_vis_frequency'] = 10
 run['graph_visuals'] = True
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
@@ -203,9 +228,13 @@ generate_mode = True
 experiment = {'runs': []}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #--------------------------------------------
 #-------------INITIALIZE---------------------
 #--------------------------------------------
+=======
+#---------------Set Seeds--------------------
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 #---------------Set Seeds--------------------
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -226,14 +255,20 @@ n_observations = env.observation_space.n
 n_actions = env.action_space.n
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #----------------------------------------------
 #----------Make Q_learner/Population-----------
 #----------------------------------------------
 =======
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 #-----------------------------------
 #----------Make Q_learner-----------
 #-----------------------------------
+<<<<<<< HEAD
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+=======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 model_dict = {}
 for i in range(run['pop_size']):
@@ -267,6 +302,7 @@ for i in range(run['pop_size']):
 #Just grab the first one as the model
 model = model_dict[0]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 #---------------Visualizations-----------------------------
@@ -309,6 +345,8 @@ if run['graph_visuals']:
 
 
 
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #---------------------------------------------
@@ -409,6 +447,7 @@ for e in range(run['n_episodes']):
         #print(model['sa_info'][i1][i2])
         #print(model['sa_info'][record['from_state'][record['action']])
 <<<<<<< HEAD
+<<<<<<< HEAD
         
         if len(model['sa_info'][i1][i2]) > 0:
             #If it exists, set reward to higher one to avoid resetting reward to zero. (quick fix)
@@ -420,6 +459,9 @@ for e in range(run['n_episodes']):
         
         
         
+=======
+        model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
         model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -439,8 +481,12 @@ for e in range(run['n_episodes']):
     #print("Size of transition_bank: ", len(model['transition_bank']))
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     #Reset path so that it is guaranteed to exist on draw
     #sa_path = []
+=======
+
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -448,6 +494,7 @@ for e in range(run['n_episodes']):
     #-------------------------------------------------------------
     #----------Print Population Performance every # of episodes---
     #-------------------------------------------------------------
+<<<<<<< HEAD
 <<<<<<< HEAD
     if e % 50 == 0: 
         print_population_performance = True
@@ -460,6 +507,9 @@ for e in range(run['n_episodes']):
         solving_episode = False
     
     if print_population_performance:
+=======
+    if e % 50 == 0:
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
     if e % 50 == 0:
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -490,7 +540,11 @@ for e in range(run['n_episodes']):
     
     #--------------------If on a solving episode-----------------
 <<<<<<< HEAD
+<<<<<<< HEAD
     if solving_episode:
+=======
+    if e % run['ga_frequency'] == 0 and e!= 0 and random.random() < run['crossover_chance']:
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
     if e % run['ga_frequency'] == 0 and e!= 0 and random.random() < run['crossover_chance']:
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
@@ -522,6 +576,7 @@ for e in range(run['n_episodes']):
                         known_edges_counter += 1
                         #Update reward record
 <<<<<<< HEAD
+<<<<<<< HEAD
                         
                         try:
                             if learned_info[j]['state-reward'][record['to_state']] != record['reward']:
@@ -530,6 +585,8 @@ for e in range(run['n_episodes']):
                             print("Reward for ", record['to_state'], "changing to ", record['reward'])
                         
                                 
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
                         learned_info[j]['state-reward'][record['to_state']] = record['reward']
@@ -656,6 +713,7 @@ for e in range(run['n_episodes']):
         print(max_indices.reshape(run['grid_dims'][0], run['grid_dims'][1]))
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     #----------------If either, update graphics-----------------
     if print_population_performance or solving_episode:
         print("pop, solving", print_population_performance, solving_episode)
@@ -702,6 +760,9 @@ for e in range(run['n_episodes']):
 =======
 
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+=======
+
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #--------------------------------------------------------
 #------------------Final Outputs-------------------------
 #--------------------------------------------------------
@@ -742,8 +803,11 @@ for model_num, model in model_dict.items():
     print("Model: ", model_num)
     print(model['Q_table'])
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 #Quit out of pygame
 pygame.quit()
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 =======
 >>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
