@@ -12,6 +12,7 @@ class Job:
         
         self.processor = processor
         self.job_type = job_type
+        
         self.id = id
     
 class Processor:
@@ -24,7 +25,7 @@ class Processor:
         self.queue = []
         self.queue_length = len(self.queue) 
         self.resource = resource
-        self.process = self.env.process(self.work(self.queue,self.resource))
+        self.process = self.env.process(self.work())
         self.total_tasks = 0
     
     
@@ -35,24 +36,29 @@ class Processor:
         if job.processor == 0:
             job.processor = self.id
     
-    def work(self,queue,resource):
+    def work(self):
 
         try:
-            for job in queue:
-                queue = queue[1:]
+            while len(self.queue)>0:
+                job = self.queue[0]
+                self.queue = self.queue[1:]
+                #queue = queue[1:]
                 starts = self.env.now
                 done_in = time_per_machine()
-                print('%f seconds for job: %i at machine %i' % (done_in,job.id, self.id))
-                print("number of jobs in queue: %i at machine %i" % (self.queue_length,self.id))
-                with resource.request() as req:
+                # print('%f seconds for job: %i at machine %i' % (done_in,job.id, self.id))
+                # print("number of jobs in queue: %i at machine %i" % (self.queue_length,self.id))
+                with self.resource.request() as req:
                     yield req
                     yield self.env.timeout(done_in)
                     finished = self.env.now
                     print('%7.4f job: %i finishes at machine %i' % (finished,job.id, self.id))
                     self.total_tasks += 1
-                    self.queue_length -= 1
-                    print("remaining jobs in queue: %i at machine %i" % (self.queue_length,self.id))
-
+                    self.queue_length = len(self.queue)
+                    del job
+                    # print("remaining jobs in queue: %i at machine %i" % (self.queue_length,self.id))
+            self.queue = []
+            self.queue_length = len(self.queue)
+            
         except simpy.Interrupt:
                     print("except")
                     
@@ -71,19 +77,21 @@ class MachineShopSimulator:
         
     def assign(self,action):
         self.processors[action[0]].assign(self.jobs[action[1]])
-        self.processors[action[0]].queue_length += 1
-    
+        self.processors[action[0]].queue_length = len(self.processors[action[0]].queue)
+        self.env.process(self.processors[action[0]].work())
+
     def simulation_check(self):
         accumulated = 0
         for processor in self.processors:
             accumulated +=processor.total_tasks
-        return accumulated == self.n_jobs
+        print(accumulated,self.n_jobs)
+        return accumulated >= self.n_jobs
     
-    def run(self):
+    def run(self,time):
         finished  = False
         while not finished:
-            #self.env.run()
-            self.env.step()
+            self.env.run(time)
+            #self.env.step()
             states,rewards=self.get_info()
             print(states,rewards)
             finished = self.simulation_check()
@@ -100,10 +108,18 @@ class MachineShopSimulator:
         rewards = 0
         total_tasks = [processor.total_tasks for processor in self.processors]
         states= states + total_tasks
+
+        """
+        Reward (-) by time
+        Reward (-) by starting simulation
+        Reward (+) by utilization
+        """
+
+
         return states,rewards
 
     def check_sim(self):
-        queue = [processor.queue_length for processor in self.processors]
+        queue = [len(processor.queue) for processor in self.processors]
         total_tasks = [processor.total_tasks for processor in self.processors]
         check = False
         if min(queue)>=1 or sum(total_tasks)>self.n_jobs-self.n_processors:
@@ -123,15 +139,27 @@ machines = np.arange(n_machines)
 actions = [(random.choice(machines),job_i) for job_i in jobs]
 simulation = MachineShopSimulator(n_jobs,n_machines)
 
-
+count = 1
 for action in actions:
     simulation.assign(action)
     if simulation.check_sim():
-        simulation.run_each()
+        simulation.env.run(simulation.env.now+1)
+        # simulation.run(count)
         states,rewards=simulation.get_info()
         print(states,rewards)
+        
     else:
         print("assigned not run")
+
+
+while not simulation.simulation_check():
+    simulation.env.run(simulation.env.now+1)
+    states,rewards=simulation.get_info()
+    print(states,rewards)
+# simulation.env.step()    
+# print(simulation.check_sim())
+# states,rewards=simulation.get_info()
+# print(states,rewards)
 # if simulation.check_sim():
 #     simulation.run()
 #simulation.run()

@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 import vector_grid_goal #Custom environment
+<<<<<<< HEAD
 import graph_plotter    #Custom plotting library
 import matplotlib.pyplot as plt
 from matplotlib import interactive
@@ -65,6 +66,11 @@ def q_to_path(env, Q_table, test_length=20):
             
     return path, actions
 
+=======
+import matplotlib.pyplot as plt
+
+
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #Make environment
 run = {}
 run['grid_dims'] = (5,5)
@@ -78,6 +84,10 @@ run['map'] = np.array([[0,0,0,0,0],
 env = vector_grid_goal.CustomEnv(grid_dims=run['grid_dims'], player_location=run['player_location'], goal_location=run['goal_location'], map=run['map'])
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 n_observations = env.observation_space.n
 n_actions = env.action_space.n
 
@@ -85,7 +95,11 @@ n_actions = env.action_space.n
 Q_table = np.zeros((n_observations,n_actions))
 print(Q_table)
 
+<<<<<<< HEAD
 #Parameters
+=======
+
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 n_episodes = 10000
 max_iter_episode = 20
 exploration_proba = 1
@@ -93,13 +107,17 @@ exploration_decreasing_decay = 0.0005
 min_exploration_proba = 0.01
 gamma = 0.90 #Changed from 0.99
 lr = 0.1
+<<<<<<< HEAD
 q_visuals = True
 q_vis_frequency = 10
 graph_visuals = True
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 total_rewards_episode = list()
 rewards_per_episode = []
 
+<<<<<<< HEAD
 #Initialize the visualizations
 if q_visuals:
     #Put initial matplotlib setting
@@ -153,6 +171,8 @@ if graph_visuals:
     graph_plotter.draw_plot(screen, run['grid_dims'][0], run['grid_dims'][0], explored, known_rewards, known_edges)
 
 
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 #Core and added actions
 #Left -0
@@ -196,6 +216,7 @@ for e in range(n_episodes):
     exploration_proba = max(min_exploration_proba, np.exp(-exploration_decreasing_decay*e))
     rewards_per_episode.append(total_episode_reward)
     
+<<<<<<< HEAD
     #If at frequency, update the q_table
     if e % q_vis_frequency == 0 and e!= 0:
         #Update and visualize
@@ -210,6 +231,8 @@ for e in range(n_episodes):
         greedy_path, actions = q_to_path(env, Q_table, test_length=20)
         graph_plotter.draw_plot(screen, run['grid_dims'][0], run['grid_dims'][0], explored, known_rewards, known_edges, greedy_path=greedy_path)
         input("Press enter")
+=======
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
 #Final outputs
 print(Q_table)
@@ -228,8 +251,12 @@ for point in range(window, len(rewards_per_episode)):
 #print(running_avg[:10])
 
 plt.plot(running_avg)
+<<<<<<< HEAD
 plt.show()
 
 #Quit out of pygame
 pygame.quit()
 #sys.exit()
+=======
+plt.show()
+>>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
