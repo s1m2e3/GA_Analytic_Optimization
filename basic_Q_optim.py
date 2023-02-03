@@ -6,23 +6,10 @@
 #----------------------------------------------------
 #----------------IMPORTS-----------------------------
 #----------------------------------------------------
-<<<<<<< HEAD
-<<<<<<< HEAD
 import warnings #Ignore future warnings
 warnings.filterwarnings(action='ignore', category=FutureWarning)
 
-=======
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-#Ignore future warnings
-import warnings
-warnings.filterwarnings(action='ignore', category=FutureWarning)
-
 #General Imports
-<<<<<<< HEAD
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 import numpy as np
 rng = np.random.default_rng(12345)
 np.set_printoptions(suppress = True)
@@ -31,8 +18,6 @@ import json
 from sklearn.preprocessing import normalize
 import random
 import time
-<<<<<<< HEAD
-<<<<<<< HEAD
 from datetime import datetime
 import sys
 import os
@@ -109,11 +94,6 @@ def q_to_path(env, Q_table, test_length=20):
             
     return path, actions
 
-
-=======
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-
 from datetime import datetime
 import sys
 import os
@@ -138,12 +118,6 @@ import vector_grid_goal #Custom environment
 
 #Visualizer
 import output_processor
-<<<<<<< HEAD
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-
-
 
 #-------------------------
 #--Default Run Settings---
@@ -152,15 +126,8 @@ run = {}
 #run['env'] = 'FrozenLake-v1'
 run['env'] = 'vector_grid_goal'
 run['n_episodes'] = 5000
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 run['ga_frequency'] = 50
-=======
-run['ga_frequency'] = 100
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-run['ga_frequency'] = 100
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 run['crossover_chance'] = 1
 run['mutation_prob'] = 0.2 
 run['python_seed'] = 12345
@@ -172,37 +139,18 @@ run['goal_location'] = (4,4)
 run['map'] = np.array([[0,0,0,0,0],
                         [0,1,0,0,0],
                         [0,0,0,1,0],
-<<<<<<< HEAD
-<<<<<<< HEAD
                         [0,0,0,0,1],
                         [0,0,1,0,0]])
 run['max_iter_episode'] = 20      #maximum of iteration per episode
-=======
-                        [0,1,0,0,1],
-                        [0,0,0,0,0]])
-run['max_iter_episode'] = 10      #maximum of iteration per episode
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-                        [0,1,0,0,1],
-                        [0,0,0,0,0]])
-run['max_iter_episode'] = 10      #maximum of iteration per episode
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 run['exploration_proba'] = 1    #initialize the exploration probability to 1
 run['exploration_decreasing_decay'] = 0.0005       #exploration decreasing decay for exponential decreasing
 run['min_exploration_proba'] = 0.01
 run['gamma'] = 0.90            #discounted factor
 run['lr'] = 0.1                 #learning rate 
 run['pop_size'] = 1
-<<<<<<< HEAD
-<<<<<<< HEAD
 run['q_visuals'] = False
 run['q_vis_frequency'] = 10
 run['graph_visuals'] = True
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-
 run['output_dict'] = {}
 
 #Env Config
@@ -227,17 +175,10 @@ generate_mode = True
 
 experiment = {'runs': []}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #--------------------------------------------
 #-------------INITIALIZE---------------------
 #--------------------------------------------
-=======
 #---------------Set Seeds--------------------
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-#---------------Set Seeds--------------------
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #Start Timer
 print("Run")
 print(run)
@@ -254,22 +195,9 @@ run['run_start_time'] = time.time()
 n_observations = env.observation_space.n
 n_actions = env.action_space.n
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #----------------------------------------------
 #----------Make Q_learner/Population-----------
 #----------------------------------------------
-=======
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-
-#-----------------------------------
-#----------Make Q_learner-----------
-#-----------------------------------
-<<<<<<< HEAD
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 model_dict = {}
 for i in range(run['pop_size']):
     model_dict[i] = {}
@@ -301,9 +229,6 @@ for i in range(run['pop_size']):
             
 #Just grab the first one as the model
 model = model_dict[0]
-
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 #---------------Visualizations-----------------------------
 #Initialize the visualizations
@@ -343,12 +268,6 @@ if run['graph_visuals']:
     #Set up pygame
     screen = graph_plotter.initialize_plot()
 
-
-
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #---------------------------------------------
 #--------------Training Loop------------------
 #---------------------------------------------
@@ -446,8 +365,6 @@ for e in range(run['n_episodes']):
         #print(i1, i2)
         #print(model['sa_info'][i1][i2])
         #print(model['sa_info'][record['from_state'][record['action']])
-<<<<<<< HEAD
-<<<<<<< HEAD
         
         if len(model['sa_info'][i1][i2]) > 0:
             #If it exists, set reward to higher one to avoid resetting reward to zero. (quick fix)
@@ -457,14 +374,6 @@ for e in range(run['n_episodes']):
         
         model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': best_reward, 'done': record['done']}
         
-        
-        
-=======
-        model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-        model['sa_info'][i1][i2] = {'to_state': int(record['to_state']), 'reward': record['reward'], 'done': record['done']}
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
         #print("hi")
         #{'to_state': record['to_state'], 'reward': record['reward'], 'done': record['done']}
     #print('sa_info')
@@ -480,22 +389,13 @@ for e in range(run['n_episodes']):
     model['transition_bank'] = []
     #print("Size of transition_bank: ", len(model['transition_bank']))
     
-<<<<<<< HEAD
-<<<<<<< HEAD
     #Reset path so that it is guaranteed to exist on draw
     #sa_path = []
-=======
 
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 
     #-------------------------------------------------------------
     #----------Print Population Performance every # of episodes---
     #-------------------------------------------------------------
-<<<<<<< HEAD
-<<<<<<< HEAD
     if e % 50 == 0: 
         print_population_performance = True
     else:
@@ -507,12 +407,6 @@ for e in range(run['n_episodes']):
         solving_episode = False
     
     if print_population_performance:
-=======
-    if e % 50 == 0:
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-    if e % 50 == 0:
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
         print("-"*40)
         print("Episode:", e, "Rewards: ")        
         for key, value in model_dict.items():
@@ -539,15 +433,7 @@ for e in range(run['n_episodes']):
         print("-"*40)       
     
     #--------------------If on a solving episode-----------------
-<<<<<<< HEAD
-<<<<<<< HEAD
     if solving_episode:
-=======
-    if e % run['ga_frequency'] == 0 and e!= 0 and random.random() < run['crossover_chance']:
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-    if e % run['ga_frequency'] == 0 and e!= 0 and random.random() < run['crossover_chance']:
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
         #-----------Convert info-----------
         #Initialize learned info structure
         learned_info = {}
@@ -575,20 +461,13 @@ for e in range(run['n_episodes']):
                     if len(record) > 0:
                         known_edges_counter += 1
                         #Update reward record
-<<<<<<< HEAD
-<<<<<<< HEAD
                         
                         try:
                             if learned_info[j]['state-reward'][record['to_state']] != record['reward']:
                                 print("Reward for ", record['to_state'], "changing from ", learned_info[j]['state-reward'][record['to_state']], "to ", record['reward'])
                         except:
                             print("Reward for ", record['to_state'], "changing to ", record['reward'])
-                        
-                                
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+                       
                         learned_info[j]['state-reward'][record['to_state']] = record['reward']
                         
                         #Update known states
@@ -712,8 +591,6 @@ for e in range(run['n_episodes']):
         max_indices = np.array(max_indices)
         print(max_indices.reshape(run['grid_dims'][0], run['grid_dims'][1]))
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     #----------------If either, update graphics-----------------
     if print_population_performance or solving_episode:
         print("pop, solving", print_population_performance, solving_episode)
@@ -757,12 +634,7 @@ for e in range(run['n_episodes']):
         
         #Wait after either
         input("Press enter")    
-=======
 
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
-
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
 #--------------------------------------------------------
 #------------------Final Outputs-------------------------
 #--------------------------------------------------------
@@ -802,12 +674,7 @@ print("Current Models")
 for model_num, model in model_dict.items():
     print("Model: ", model_num)
     print(model['Q_table'])
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 #Quit out of pygame
 pygame.quit()
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
-=======
->>>>>>> 7b78d1458ddfb1f2a19265523ce75b37e6b0f8ac
+
