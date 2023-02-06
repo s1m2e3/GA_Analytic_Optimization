@@ -509,7 +509,6 @@ class Smart_Crossover:
                     return list(g.edges),cycles
                     
             else:
-            
                 cycles = []
                 ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
                 ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
@@ -537,56 +536,44 @@ class Smart_Crossover:
 
     def optimize_bf_mip(self,rew_matrix,source_state,sink_state,cycle):     
         
-        
-        flow_value = self.mip_relaxed_shortest_path(self.graph.edges,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
-        bellman_ford = 
+        #prep for bellman_ford_cycle
+        edges = list(self.graph.edges)
 
-    def mip_relaxed_shortest_path(self,graph, start, end):
-        
+    def bellman_ford(graph, start, end):
         n = len(graph)
-        m = sum([len(graph[i]) for i in range(n)])
-        
-        model = gp.Model("shortest_path")
-        
-        x = {}
-        for i in range(n):
-            for j, w in graph[i]:
-                x[i, j] = model.addVar(obj=w, vtype=gp.GRB.CONTINUOUS, name="x_{}_{}".format(i, j))
-        
-        model.update()
-        
-        for i in range(n):
-            out_edges = gp.quicksum(x[i, j] for j, w in graph[i])
-            in_edges = gp.quicksum(x[j, i] for j, w in graph[i])
-            model.addConstr(out_edges - in_edges == 0, name="flow_conservation_{}".format(i))
-        
-        model.setObjective(gp.quicksum(x[start, j] for j, w in graph[start]), gp.GRB.MINIMIZE)
-        
-        model.optimize()
-        
-        flow_value = model.objVal
-        
-        return flow_value
-
-    def bellman_ford(self, graph, start, end, flow_value):
-        n = len(graph)
-        dist = [float('inf')] * n
-        dist[start] = 0
+        distance = [float('inf')] * n
+        distance[start] = 0
         for i in range(n - 1):
             for u in range(n):
                 for v, w in graph[u]:
-                    if dist[u] != float('inf') and dist[v] > dist[u] + w:
-                        dist[v] = dist[u] + w
+                    if distance[v] > distance[u] + w:
+                        distance[v] = distance[u] + w
+
         for u in range(n):
             for v, w in graph[u]:
-                if dist[u] != float('inf') and dist[v] > dist[u] + w:
-                    return None # negative cycle detected
-        
-        if dist[end] == flow_value:
-            return dist[end]
-        else:
-            return None # infeasible solution
-
-            
+                if distance[v] > distance[u] + w:
+                    return None, None
+        return distance, end
 
 
+
+    def eliminate_cycles(graph, start, end):
+    distance = self.bellman_ford(graph, start, end)
+    if distance is None:
+        cycle = []
+        for i in range(len(graph)):
+            for j, w in graph[i]:
+                if distance[j] > distance[i] + w:
+                    cycle = [(i, j, w)]
+                    u = i
+                    while u != j:
+                        for k, x in graph[u]:
+                            if distance[k] == distance[u] + x:
+                                cycle.append((u, k, x))
+                                u = k
+                                break
+        cycle_edge = min(cycle, key=lambda x: x[2])
+        graph[cycle_edge[0]].remove(cycle_edge[1:])
+        return eliminate_cycles(graph, start, end)
+    else:
+        return distance[end]

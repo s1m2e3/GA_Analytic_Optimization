@@ -151,6 +151,9 @@ run['pop_size'] = 1
 run['q_visuals'] = False
 run['q_vis_frequency'] = 10
 run['graph_visuals'] = False
+run["mip_flag"] = False
+run["cycle_flag"] = False
+run["Bellmanford_flag"] = True
 run['output_dict'] = {}
 
 #Env Config
@@ -503,7 +506,7 @@ for e in range(run['n_episodes']):
         start = datetime.now()
         
         #Run the crossover
-        crossover=smart_crossover.Smart_Crossover(learned_info)
+        crossover=smart_crossover.Smart_Crossover(learned_info,run["mip_flag"],run["cycle_flag"],run["Bellmanford_flag"])
         
         print("Solution time: ", datetime.now() - start)
 
