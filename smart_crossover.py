@@ -16,14 +16,14 @@ import time
 
 class Smart_Crossover:
 
-    def __init__(self,learners_info,mip_flag,cycle_flag,Bellmanford_flag):
+    def __init__(self,learners_info,mip_flag,cycle_flag):
         print("-"*20)
         print("In smart crossover code")
         print("-"*20)
         self.learned_info=learners_info
         self.mip_flag = mip_flag
         self.cycle_flag = cycle_flag
-        self.Bellmanford_flag = Bellmanford_flag 
+        
         #Generate the ensemble.
         self.ensemble = self.ensemble_learned_info()
         
@@ -49,13 +49,12 @@ class Smart_Crossover:
        
         
         while condition:
-            if not self.Bellmanford_flag:
-                self.solution,cycle = self.optimize_mip(rew_matrix,source_state,sink_state,cycle)
-                self.n_iter+=1
-                if len(cycle)==0:
-                    condition=False
-            else:
-                self.solution,condition = self.optimize_bf_mip(rew_matrix,source_state,sink_state,cycle)
+        
+            self.solution,cycle = self.optimize_mip(rew_matrix,source_state,sink_state,cycle)
+            self.n_iter+=1
+            if len(cycle)==0:
+                condition=False
+        
         
     def ensemble_learned_info(self):
         #Collect globally known data.
@@ -534,46 +533,5 @@ class Smart_Crossover:
                 
                 return ordered_path,cycles      
 
-    def optimize_bf_mip(self,rew_matrix,source_state,sink_state,cycle):     
-        
-        #prep for bellman_ford_cycle
-        edges = list(self.graph.edges)
-
-    def bellman_ford(graph, start, end):
-        n = len(graph)
-        distance = [float('inf')] * n
-        distance[start] = 0
-        for i in range(n - 1):
-            for u in range(n):
-                for v, w in graph[u]:
-                    if distance[v] > distance[u] + w:
-                        distance[v] = distance[u] + w
-
-        for u in range(n):
-            for v, w in graph[u]:
-                if distance[v] > distance[u] + w:
-                    return None, None
-        return distance, end
-
-
-
-    def eliminate_cycles(graph, start, end):
-    distance = self.bellman_ford(graph, start, end)
-    if distance is None:
-        cycle = []
-        for i in range(len(graph)):
-            for j, w in graph[i]:
-                if distance[j] > distance[i] + w:
-                    cycle = [(i, j, w)]
-                    u = i
-                    while u != j:
-                        for k, x in graph[u]:
-                            if distance[k] == distance[u] + x:
-                                cycle.append((u, k, x))
-                                u = k
-                                break
-        cycle_edge = min(cycle, key=lambda x: x[2])
-        graph[cycle_edge[0]].remove(cycle_edge[1:])
-        return eliminate_cycles(graph, start, end)
-    else:
-        return distance[end]
+    
+    
