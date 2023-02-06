@@ -126,9 +126,9 @@ run = {}
 #run['env'] = 'FrozenLake-v1'
 run['env'] = 'vector_grid_goal'
 run['n_episodes'] = 5000
-
+sns.set(style='darkgrid')
 run['ga_frequency'] = 50
-run['crossover_chance'] = 1
+run['crossover_chance'] = 0.1
 run['mutation_prob'] = 0.2 
 run['python_seed'] = 12345
 run['np_seed'] = 12345
@@ -150,7 +150,7 @@ run['lr'] = 0.1                 #learning rate
 run['pop_size'] = 1
 run['q_visuals'] = False
 run['q_vis_frequency'] = 10
-run['graph_visuals'] = True
+run['graph_visuals'] = False
 run['output_dict'] = {}
 
 #Env Config
@@ -633,7 +633,7 @@ for e in range(run['n_episodes']):
             graph_plotter.draw_plot(screen, run['grid_dims'][0], run['grid_dims'][0], explored, known_rewards, known_edges, greedy_path=greedy_path, optim_path=solution_path)
         
         #Wait after either
-        input("Press enter")    
+        #input("Press enter")    
 
 #--------------------------------------------------------
 #------------------Final Outputs-------------------------

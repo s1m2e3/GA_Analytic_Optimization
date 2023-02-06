@@ -8,6 +8,7 @@ import random
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
+import gurobipy as gp
 from datetime import datetime
 import time
 
@@ -15,12 +16,14 @@ import time
 
 class Smart_Crossover:
 
-    def __init__(self,learners_info):
+    def __init__(self,learners_info,mip_flag,cycle_flag,Bellmanford_flag):
         print("-"*20)
         print("In smart crossover code")
         print("-"*20)
         self.learned_info=learners_info
-        
+        self.mip_flag = mip_flag
+        self.cycle_flag = cycle_flag
+        self.Bellmanford_flag = Bellmanford_flag 
         #Generate the ensemble.
         self.ensemble = self.ensemble_learned_info()
         
@@ -46,11 +49,13 @@ class Smart_Crossover:
        
         
         while condition:
-            self.solution,cycle = self.optimize(rew_matrix,source_state,sink_state,cycle)
-            self.n_iter+=1
-            if len(cycle)==0:
-                condition=False
-        
+            if not self.Bellmanford_flag:
+                self.solution,cycle = self.optimize_mip(rew_matrix,source_state,sink_state,cycle)
+                self.n_iter+=1
+                if len(cycle)==0:
+                    condition=False
+            else:
+                self.solution,condition = self.optimize_bf_mip(rew_matrix,source_state,sink_state,cycle)
         
     def ensemble_learned_info(self):
         #Collect globally known data.
@@ -330,15 +335,15 @@ class Smart_Crossover:
                 
                 #Potential edge rewards (-2)
                 elif rew_matrix[row_index][col_index]==0 and adj_matrix[row_index][col_index]==0:
-                    rew_matrix[row_index][col_index]=-0
+                    rew_matrix[row_index][col_index]=-2
                     
                 #Add known non-existent reward penalty
                 else: 
-                    rew_matrix[row_index][col_index]=-5
+                    rew_matrix[row_index][col_index]=-10
                     
               
         #Where the not known edges are added.
-        self.graph.add_edges_from(self.ensemble['not_known'])
+        #self.graph.add_edges_from(self.ensemble['not_known'])
         
         #If altered, make it -2 reward for nonexistent edges
         #altered = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
@@ -371,19 +376,19 @@ class Smart_Crossover:
         
         return rew_matrix, self.ensemble['known_states'].index(source_state), self.ensemble['known_states'].index(sink_state)
 
-    def optimize(self,rew_matrix,source_state,sink_state,cycle):
+    def optimize_mip(self,rew_matrix,source_state,sink_state,cycle):
         
         #Extra computational time from making multiple adjacency matrices?
+        self.graph.remove_edges_from(list(nx.selfloop_edges(self.graph)))
+        start = time.time()
+        rew_matrix=rew_matrix
         adj_matrix = np.array(nx.attr_matrix(self.graph,rc_order=self.graph.nodes))
-        print(adj_matrix)
-        print(rew_matrix)
         #create variables
-        x=cvx.Variable(adj_matrix.shape)
-        #theta = cvx.Variable(adj_matrix.shape[0],boolean=True)
-
-        #big number M
-        #m=1000
-
+        if self.mip_flag:
+            x=cvx.Variable(adj_matrix.shape,boolean=True)
+        else:
+            x=cvx.Variable(adj_matrix.shape)
+        
         #create constraints, x is binary
         constraints = [x<=1,x>=0]
         #constraints += [theta<=1,x>=0]
@@ -398,45 +403,51 @@ class Smart_Crossover:
                 #constraint of only allowing directed edges
                 #!!!!!!!!!!!!!
                 #TODO: Fix, this one doesn't make sense.
-                constraints += [x[row_index][col_index]+x[col_index][row_index]<=1]
+                if self.mip_flag:
+                    constraints += [x[row_index][col_index]+x[col_index][row_index]<=1]
 
-        #Sum of inflow is the sum of outflow 
+        #Sum of inflow is the sum of outflow
+         
         vector = np.zeros(len(adj_matrix))
         vector[sink_state]=-1
         vector[source_state]=1
         constraints += [cvx.sum(x,axis=1)-cvx.sum(x,axis=0)==vector]
         
         #force only one  entry and only one exit 
-        constraints += [cvx.sum(x,axis=0)<=1]
-        constraints += [cvx.sum(x,axis=1)<=1]
-        
+        if self.mip_flag:
+            constraints += [cvx.sum(x,axis=0)<=1]
+            constraints += [cvx.sum(x,axis=1)<=1]
+            
         #if edge is activated it has to have another edge which is incident.
-        #for row_index in range(len(adj_matrix)):
-        #    for col_index in range(len(adj_matrix)): 
-        #constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)>=2-m*(1-theta)]
-        #constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)<=1+m*(theta)]        
+        # constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)>=2-m*(1-theta)]
+        # constraints += [cvx.sum(x,axis=1)+cvx.sum(x,axis=0)<=1+m*(theta)]        
 
         #Add constraints for found cycles:
         #Q: Can cycles be avoided with some constraints?
-        
-        for cycle_i in self.cycle: 
-            index_nodes_cycle = [list(self.graph.nodes).index(node) for node in cycle_i]
-            edges_cycle = [(index_nodes_cycle[i],index_nodes_cycle[i+1]) for i in range(len(index_nodes_cycle)-1)]
-            edges_cycle.append((index_nodes_cycle[-1],index_nodes_cycle[0]))
-            exp = 0
-            for pair in edges_cycle:
-                exp+=x[pair[0]][pair[1]]
-            num=len(cycle_i)
-            constraints += [exp<= num-1]
+        if self.cycle_flag:
+            for cycle_i in self.cycle: 
+                index_nodes_cycle = [list(self.graph.nodes).index(node) for node in cycle_i]
+                edges_cycle = [(index_nodes_cycle[i],index_nodes_cycle[i+1]) for i in range(len(index_nodes_cycle)-1)]
+                edges_cycle.append((index_nodes_cycle[-1],index_nodes_cycle[0]))
+                exp = 0
+                for pair in edges_cycle:
+                    exp+=x[pair[0]][pair[1]]
+                num=len(cycle_i)
+                constraints += [exp<= num-1]
+                #print("cleaned cycle")
 
         #create obj_function 
         problem=cvx.Problem(cvx.Maximize(cvx.sum(cvx.multiply(rew_matrix,x))),constraints)
-        #problem.solve("GLPK")
+        if self.mip_flag:
+            problem.solve("GLPK_MI")
+        else:
+            problem.solve("GLPK")
         #solve
         #for writing model//works when unimodular
         
         #for solving MIP
-        problem.solve("GLPK_MI")
+        
+        #problem.solve("CPLEX","model.lp",verbose=True)
         
         if problem.status == "infeasible":
             for cons in constraints:
@@ -446,6 +457,7 @@ class Smart_Crossover:
                 return
         else:
             self.value = problem.value
+            print(time.time()-start)
             new_pairs=[]
             for row_index in range(len(x.value)):
                 for col_index in range(len(x.value)):
@@ -455,13 +467,8 @@ class Smart_Crossover:
             g=nx.DiGraph()
             g.add_edges_from(new_pairs)
             
-            #print("solution_edges",g.edges)
-            
-            
             #------------------Run to solve cycles---------------------
-            solve_cycles = True
-            
-            if solve_cycles:
+            if self.cycle_flag:
                 #find cycles:
                 cycles=sorted(nx.simple_cycles(g))
                 #print("found cycles",cycles)
@@ -478,50 +485,107 @@ class Smart_Crossover:
                 
                 else: 
                     
-                    nodes = g.nodes
-                    new_colors = []
-                    color = self.color_nodes(g)
+                    # nodes = g.nodes
+                    # new_colors = []
+                    # color = self.color_nodes(g)
                     
-                    #color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
-                    #color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
-                    edges_color = self.color_edges(g)
-                    #for node in nodes:
-                    #    new_list=(list(self.graph.nodes))
-                    #    new_colors.append(color[new_list.index(node)])
+                    # #color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
+                    # #color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
+                    # edges_color = self.color_edges(g)
+                    # print(nodes)
+                    # print(list(self.graph.nodes))
+                    # for node in nodes:
+                    #     new_list=(list(self.graph.nodes))
+                    #     new_colors.append(color[new_list.index(node)])
                     
-                    plt.figure(figsize=(20,10))
-                    nx.draw(g,with_labels=True)
-                    plt.show()
-                    print(g.edges)
+                    # plt.figure(figsize=(20,10))
+                    
+                    # nx.draw(g,with_labels=True,node_color=new_colors)
+                    # plt.show()
+                    # print(g.edges)
                     
                     #ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
                     #ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
-                    return g.edges,cycles
+                    return list(g.edges),cycles
                     
             else:
             
-                
                 cycles = []
                 ordered_path =nx.dijkstra_path(g,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
                 ordered_path = [(ordered_path[i],ordered_path[i+1]) for i in range(len(ordered_path)-1)]
                 
+                # nodes = g.nodes
+                # new_colors = []
+                # color = self.color_nodes(g)
                 
-                nodes = g.nodes
-                new_colors = []
-                color = self.color_nodes(g)
+                # #color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
+                # #color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
+                # edges_color = self.color_edges(g)
+                # print(nodes)
+                # print(list(self.graph.nodes))
+                # # for node in nodes:
+                # #     new_list=(list(self.graph.nodes))
+                # #     new_colors.append(color[new_list.index(node)])
                 
-                #color[list(g.nodes).index(list(self.graph.nodes)[source_state])]="green"
-                #color[list(g.nodes).index(list(self.graph.nodes)[sink_state])]="brown"
-                edges_color = self.color_edges(g)
-                #for node in nodes:
-                #    new_list=(list(self.graph.nodes))
-                #    new_colors.append(color[new_list.index(node)])
+                # plt.figure(figsize=(20,10))
                 
-                plt.figure()
-                nx.draw(g,with_labels=True)
-                plt.show()
+                # nx.draw(g,with_labels=True,node_color=new_colors)
+                # plt.show()
+                # print(g.edges)
                 
-                return ordered_path,cycles                
+                return ordered_path,cycles      
+
+    def optimize_bf_mip(self,rew_matrix,source_state,sink_state,cycle):     
+        
+        
+        flow_value = self.mip_relaxed_shortest_path(self.graph.edges,list(self.graph.nodes)[source_state],list(self.graph.nodes)[sink_state])
+        bellman_ford = 
+
+    def mip_relaxed_shortest_path(self,graph, start, end):
+        
+        n = len(graph)
+        m = sum([len(graph[i]) for i in range(n)])
+        
+        model = gp.Model("shortest_path")
+        
+        x = {}
+        for i in range(n):
+            for j, w in graph[i]:
+                x[i, j] = model.addVar(obj=w, vtype=gp.GRB.CONTINUOUS, name="x_{}_{}".format(i, j))
+        
+        model.update()
+        
+        for i in range(n):
+            out_edges = gp.quicksum(x[i, j] for j, w in graph[i])
+            in_edges = gp.quicksum(x[j, i] for j, w in graph[i])
+            model.addConstr(out_edges - in_edges == 0, name="flow_conservation_{}".format(i))
+        
+        model.setObjective(gp.quicksum(x[start, j] for j, w in graph[start]), gp.GRB.MINIMIZE)
+        
+        model.optimize()
+        
+        flow_value = model.objVal
+        
+        return flow_value
+
+    def bellman_ford(self, graph, start, end, flow_value):
+        n = len(graph)
+        dist = [float('inf')] * n
+        dist[start] = 0
+        for i in range(n - 1):
+            for u in range(n):
+                for v, w in graph[u]:
+                    if dist[u] != float('inf') and dist[v] > dist[u] + w:
+                        dist[v] = dist[u] + w
+        for u in range(n):
+            for v, w in graph[u]:
+                if dist[u] != float('inf') and dist[v] > dist[u] + w:
+                    return None # negative cycle detected
+        
+        if dist[end] == flow_value:
+            return dist[end]
+        else:
+            return None # infeasible solution
 
             
 
