@@ -23,7 +23,7 @@ from gym.spaces import Box, Discrete
 #--------------Global Controls---------------------
 goal_reward_val = 20
 regular_reward_val = 10
-step_cost = 1.5
+step_cost = 0
 
 class CustomEnv(Env):
     #--------------------Properties-----------------------

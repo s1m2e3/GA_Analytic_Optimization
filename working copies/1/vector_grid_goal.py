@@ -23,7 +23,7 @@ from gym.spaces import Box, Discrete
 #--------------Global Controls---------------------
 goal_reward_val = 20
 regular_reward_val = 10
-step_cost = 1.5
+step_cost = 0
 
 class CustomEnv(Env):
     #--------------------Properties-----------------------
@@ -153,20 +153,17 @@ class CustomEnv(Env):
         if (self.player_x == self.goal_x and
             self.player_y == self.goal_y
             ):
-            reward = goal_reward_val
+            reward = goal_reward_val - step_cost
             done = True
         else: 
             #Give reward from base state if non-zero
             if self.run_base_field[self.player_y][self.player_x] != 0:
-                 reward = regular_reward_val
+                 reward = regular_reward_val - step_cost
             else: 
                 reward = 0
 
             self.run_base_field[self.player_y][self.player_x] = 0
             done = False
-        
-        #Decrement with step cost
-        reward = reward - step_cost
         
         #Return info to the player
         #Todo return as single number. From the bottom up vectorized.

@@ -31,7 +31,7 @@ def draw_grid(screen, x, y, width, height, box_width, box_height, border_width):
         print(i)
         points_row =[] 
         for j in range(width):
-            pygame.draw.rect(self.screen, BLACK, (x + j*box_width, y + i*box_height, box_width, box_height), width=border_width)
+            pygame.draw.rect(screen, BLACK, (x + j*box_width, y + i*box_height, box_width, box_height), width=border_width)
             #Save the middle point
             points_row.append((x + j*box_width + (0.5*box_width), y + i*box_height + (0.5*box_height)))
         

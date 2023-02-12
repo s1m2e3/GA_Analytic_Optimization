@@ -106,13 +106,13 @@ run['env'] = 'vector_grid_goal'
 run['n_episodes'] = 4000
 sns.set(style='darkgrid')
 run['ga_frequency'] = 100
-run['crossover_chance'] = 0
+run['crossover_chance'] = 1
 run['mutation_prob'] = 0.2 
 run['python_seed'] = 12345
 run['np_seed'] = 12345
 run['env_seed'] = 12345
 
-
+'''
 run['map'] = np.array([[0,0,0,0,0,0,0],
                         [0,1,0,0,0,0,0],
                         [0,0,0,1,0,0,0],
@@ -120,7 +120,7 @@ run['map'] = np.array([[0,0,0,0,0,0,0],
                         [0,1,0,0,0,0,0],
                         [0,0,0,1,0,0,0],
                         [0,0,1,0,0,0,0]])
-
+'''
 '''
 run['map'] = np.array([[0,0,0,0,0],
                         [0,1,0,0,0],
@@ -134,17 +134,15 @@ run['map'] = np.array([[0,0,0,0,0],
                         [0,0,0,0,0],
                         [0,0,0,0,1],
                         [0,0,0,0,0]])
-'''
 '''                        
 run['map'] = np.array([[0,0,0,0,0,0,0],
                         [0,0,0,0,0,1,0],
                         [0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0],
+                        [0,0,0,1,0,0,0],
                         [0,1,0,0,0,0,0],
                         [0,0,0,0,0,0,1],
                         [0,0,0,0,0,0,0]])
-'''
-                      
+                       
 run['grid_dims'] = (len(run['map'][0]),len(run['map'][1]))
 run['player_location'] = (0,0)
 run['goal_location'] = (run['grid_dims'][0] - 1, run['grid_dims'][1] - 1)  
@@ -164,12 +162,8 @@ run['screen_viz_frequency'] = 50
 
 run['update_path_max_q'] = False
 run['update_path_increment'] = False
-run['policy_mixing'] = False
+run['policy_mixing'] = True
 run['policy_uses'] = 500
-
-run['path_replay'] = False
-run['replay_frequency'] = 50
-run['replay_uses'] = 0
 
 run['path_q_increment'] = 10
 run['random_endpoints'] = False
@@ -306,7 +300,7 @@ if run['graph_visuals']:
 #---------------------------------------------
 #--------------Training Loop------------------
 #---------------------------------------------
-model['saved_prev_run'] = []
+
 for e in range(run['n_episodes']):
     #print("--------------Episode:", str(e), "-----------------")
     #we initialize the first state of the episode
@@ -321,12 +315,11 @@ for e in range(run['n_episodes']):
     #Run the episode
     
     #print("The model is: ", model)
-
     model['prev_run'] = []
     model['prev_first'] = 0
     model['prev_last'] = 0
     
-    replay_counter = 0
+    
     
     for i in range(model['max_iter_episode']): 
         #--------------------------------------
@@ -354,17 +347,6 @@ for e in range(run['n_episodes']):
                     #Decrement the policy uses.
                     entry['uses_remaining'] -= 1
                     #print('uses_remaining', entry['uses_remaining'])
-        
-        if run['path_replay']:
-            #print("hi")
-            #print(len(model['saved_prev_run']))
-            #print(run['replay_uses'])
-            if len(model['saved_prev_run']) > 0:
-                if run['replay_uses'] > 0:
-                    #print("Replaying", run['replay_uses'])
-                    model['action'] = model['saved_prev_run'][replay_counter][1]
-                    replay_counter += 1
-                    run['replay_uses'] -= 1
         
         #--------------Run action---------------------
         #print('S', model['current_state'], ' A', model['action'])
@@ -533,25 +515,9 @@ for e in range(run['n_episodes']):
             print(max_indices.reshape(run['grid_dims'][0], run['grid_dims'][1]))
             
             
-        print("-"*40)  
-
-    #-----------------------------------
-    #-------Path Replay----------------
-    #-----------------------------------
-    if run['path_replay']:
-        if e%run['replay_frequency'] == 0 and e!= 0:
-            print("updating replay")
-            #Update the saved run
-            model['saved_prev_run'] = copy.deepcopy(model['prev_run'])
-            run['replay_uses'] = 100
-            #print(model['prev_run'])
-            #input("go on")
+        print("-"*40)       
     
-    
-    
-    #------------------------------------------------------------
     #--------------------If on a solving episode-----------------
-    #------------------------------------------------------------
     if solving_episode:
         #-----------Convert info-----------
         #Initialize learned info structure
@@ -679,6 +645,8 @@ for e in range(run['n_episodes']):
         #---------------------------------------------------
         #---------------Alternate Update Strategies---------
         #---------------------------------------------------
+        
+        
         if run['policy_mixing']:
             #Clear past models (For now)
             model['mixing_policy_list'] = []
@@ -692,11 +660,6 @@ for e in range(run['n_episodes']):
             
             #Add the new entry to the policy mixing list
             model['mixing_policy_list'].append(new_entry)
-            
-        if run['path_replay']:
-            model['mixing_policy_list'] = []
-            print(model['prev_run'])
-            input('stuff')
         
         if run['update_path_increment'] or run['update_path_max_q']:
             #For each individual, set the path sa pairs to 1.5 times the highest Q value.

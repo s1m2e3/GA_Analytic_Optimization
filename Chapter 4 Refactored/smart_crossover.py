@@ -67,6 +67,7 @@ class Smart_Crossover:
         not_known = []
         known_not_exist = []
         
+        
         for learner in self.learned_info.values():
             #print("learner")
             #print(learner)
@@ -274,22 +275,18 @@ class Smart_Crossover:
         #source_state = self.learned_info[random.choice(list(self.learned_info))]['prev_run'][0][0]
         #sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_run'][-1][0]
         
-        #Grab a saved zero state as the start
-        source_state = self.learned_info[random.choice(list(self.learned_info))]['prev_first']
+        #Use zero as a start
+        source_state = 0 #self.learned_info[random.choice(list(self.learned_info))]['prev_first']
         
         if self.run['random_endpoints']:
-            sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_last']
+            sink_state = random.choice(self.ensemble['known_states'])
+            #self.learned_info[random.choice(list(self.learned_info))]['prev_last']
             #print("OG Source", source_state, "OG sink", sink_state)
             
-            if sink_state == source_state:
-                #Choose a random one
-                sink_state = source_state
-                while sink_state == source_state:
-                    sink_state = random.choice(self.ensemble['known_states'])
-            
-                    
+            while sink_state == source_state:
+                sink_state = random.choice(self.ensemble['known_states'])
         
-        
+
         if self.run['reward_endpoints']:
             print("Chose reward endpoints")
             #Grab all reward spots
@@ -303,15 +300,10 @@ class Smart_Crossover:
             if len(reward_squares) > 0:
                 sink_state = random.choice(reward_squares)
             else:
-                #If no rewards, choose randomly
-                sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_last']
-                #print("OG Source", source_state, "OG sink", sink_state)
+                sink_state = random.choice(self.ensemble['known_states'])
                 
-                if sink_state == source_state:
-                    #Choose a random one
-                    sink_state = source_state
-                    while sink_state == source_state:
-                        sink_state = random.choice(self.ensemble['known_states'])
+                while sink_state == source_state:
+                    sink_state = random.choice(self.ensemble['known_states'])
                 
         #Print what source and sink are chosen
         print("Source", source_state, "sink", sink_state)
