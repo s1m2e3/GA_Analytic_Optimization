@@ -299,11 +299,15 @@ class Smart_Crossover:
                 #print(key, value)
                 if value > 0:
                     reward_squares.append(key)
+                    print("appended")
             #print("Rewards Squares", reward_squares)
             if len(reward_squares) > 0:
-                sink_state = random.choice(reward_squares)
+                
+                sink_state = max(key)
+                print(sink_state)
             else:
                 #If no rewards, choose randomly
+                sink_state = max(list(self.ensemble['state-reward']))
                 sink_state = self.learned_info[random.choice(list(self.learned_info))]['prev_last']
                 #print("OG Source", source_state, "OG sink", sink_state)
                 
@@ -312,7 +316,8 @@ class Smart_Crossover:
                     sink_state = source_state
                     while sink_state == source_state:
                         sink_state = random.choice(self.ensemble['known_states'])
-                
+        sink_state = max(list(self.ensemble['state-reward']))    
+        print(sink_state)
         #Print what source and sink are chosen
         print("Source", source_state, "sink", sink_state)
         
@@ -366,15 +371,15 @@ class Smart_Crossover:
                 
                 #Known edge reward: Known edge, no reward.
                 elif rew_matrix[row_index][col_index]==0 and adj_matrix[row_index][col_index]==1:
-                    rew_matrix[row_index][col_index]=0
+                    rew_matrix[row_index][col_index]=-2
                 
                 #Potential edge rewards (-2)
                 elif rew_matrix[row_index][col_index]==0 and adj_matrix[row_index][col_index]==0:
-                    rew_matrix[row_index][col_index]=-2
+                    rew_matrix[row_index][col_index]=-10
                     
                 #Add known non-existent reward penalty
                 else: 
-                    rew_matrix[row_index][col_index]=-10
+                    rew_matrix[row_index][col_index]=-100
                     
               
         #Where the not known edges are added.

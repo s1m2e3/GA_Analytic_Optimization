@@ -298,7 +298,8 @@ class Smart_Crossover:
                     reward_squares.append(key)
             #print("Rewards Squares", reward_squares)
             if len(reward_squares) > 0:
-                sink_state = random.choice(reward_squares)
+                #sink_state = random.choice(reward_squares)
+                sink_state = max(reward_squares)
             else:
                 sink_state = random.choice(self.ensemble['known_states'])
                 
@@ -358,15 +359,15 @@ class Smart_Crossover:
                 
                 #Known edge reward: Known edge, no reward.
                 elif rew_matrix[row_index][col_index]==0 and adj_matrix[row_index][col_index]==1:
-                    rew_matrix[row_index][col_index]=0
+                    rew_matrix[row_index][col_index]=-5
                 
                 #Potential edge rewards (-2)
                 elif rew_matrix[row_index][col_index]==0 and adj_matrix[row_index][col_index]==0:
-                    rew_matrix[row_index][col_index]=-2
+                    rew_matrix[row_index][col_index]=-10
                     
                 #Add known non-existent reward penalty
                 else: 
-                    rew_matrix[row_index][col_index]=-10
+                    rew_matrix[row_index][col_index]=-100
                     
               
         #Where the not known edges are added.

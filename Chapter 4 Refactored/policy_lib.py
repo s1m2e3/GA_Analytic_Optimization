@@ -3,7 +3,8 @@ import numpy as np
 import gym                      #Support for RL environment.
 import smart_crossover          #Solver: By Sam
 import graph_plotter            #Visualization helper   
-from datetime import datetime             
+from datetime import datetime
+import random             
 
 
 
@@ -62,9 +63,9 @@ class Random_Policy:
         def __init__(self, env, seed):
             self.env = env
             self.seed = seed
-            #random.seed(run['python_seed'])
-            #np.random.seed(run['np_seed'])
-            #env.action_space.np_random.seed(run['env_seed']) 
+            random.seed(seed)
+            np.random.seed(seed)
+            env.action_space.np_random.seed(seed) 
             print("initializing random policy")
         
         def get_action(self, state):
@@ -85,7 +86,8 @@ class Analytic_Policy:
             self.san_dict = {}      #State action next dictionary.
             
             self.learned_info = {}     #Compatible format with solver.
-            
+            self.num_rewards = []
+
         def update_known_info(self, state, action, reward, next_state):
             #-----------Update state knowledge-------------
             if state not in self.known_states:
@@ -113,7 +115,10 @@ class Analytic_Policy:
                     self.san_dict[state][next_state] = action
             else:
                 self.san_dict[state] = {next_state: action}
-                    
+            
+            if len(self.num_rewards)==0 or self.num_rewards[-1]!=sum(list(self.state_reward.values())):
+                
+                self.num_rewards.append(sum(list(self.state_reward.values())))            
         
         def update_policy(self, run):
             #Calculates the analytically suggested path
@@ -121,25 +126,32 @@ class Analytic_Policy:
             start = datetime.now()
             #Run the crossover
             #print("Starting crossover")
-            crossover=smart_crossover.Smart_Crossover(self.learned_info, run)
             
-            print("Solution time: ", datetime.now() - start)
+            if len(self.num_rewards)>1 and self.num_rewards[-1]!=self.num_rewards[-2]: 
+                self.num_rewards[-2]=self.num_rewards[-1]
+                crossover=smart_crossover.Smart_Crossover(self.learned_info, run)
+                
+                print("Solution time: ", datetime.now() - start)
 
-            print("Objective Value:",crossover.value)
+                print("Objective Value:",crossover.value)
+                
+                solution_path = crossover.solution
+                #Update recommended path
+                self.recommended_path = solution_path
+                print("Solution path", solution_path)
             
-            solution_path = crossover.solution
-            #Update recommended path
-            self.recommended_path = solution_path
-            print("Solution path", solution_path)
-            
+            else:
+                print("not re-computed")
             #Find path and also make policy dictionary
             sa_path = []
-            for edge in solution_path:
-                if edge in self.known_edges:
+            
+            for edge in self.recommended_path:
+                if edge[0] in self.known_edges and edge[1] in self.known_edges[edge[0]]:
                     #Find the correct action in san_dict
                     action = self.san_dict[edge[0]][edge[1]]  
                 else:
                     #Choose a random action from action space
+                    print("taking random action")
                     action = self.env.action_space.sample()
                     
                 sa_path.append((edge[0], action))
