@@ -466,10 +466,16 @@ class Smart_Crossover:
 
         #create obj_function 
         problem=cvx.Problem(cvx.Maximize(cvx.sum(cvx.multiply(rew_matrix,x))),constraints)
-        if self.mip_flag:
-            problem.solve("GLPK_MI")
-        else:
-            problem.solve("GLPK")
+        if not self.mip_flag:
+            prob_data,_,_ = problem.get_problem_data(cvx.SCS)
+            print(prob_data["c"])
+            print(prob_data["A"])
+            print(prob_data["b"])
+            input("here it is")    
+        problem.solve("SCIPY")
+        
+        
+       
         #solve
         #for writing model//works when unimodular
         

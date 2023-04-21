@@ -30,7 +30,7 @@ class CustomEnv(Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
     #----------------------Methods------------------------
-    def __init__(self, grid_dims = (-1,-1), player_location = (-1,-1), goal_location = (-1,-1), map='random'):
+    def __init__(self, grid_dims = (-1,-1), player_location = (-1,-1), goal_location = (-1,-1), map='random',n_agents=2):
         #Colors
         self.white = (255,255,255)
         self.black = (0,0,0)
@@ -59,7 +59,7 @@ class CustomEnv(Env):
         self.field = np.zeros((self.field_width, self.field_height))
         
         #Randomly add rewards to map
-        reward_percentage = 0.2
+        reward_percentage = 0.2*n_agents
         if map == 'random':
             indices = np.random.choice(np.arange(self.field.size), replace=False,
                                size=int(self.field.size * reward_percentage))

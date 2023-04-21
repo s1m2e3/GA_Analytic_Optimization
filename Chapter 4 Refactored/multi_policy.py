@@ -13,6 +13,9 @@ import gym                      #Support for RL environment.
 import matplotlib.pyplot as plt
 import time
 import os
+from matplotlib import cm
+from matplotlib import interactive
+from matplotlib.ticker import LinearLocator
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -40,16 +43,16 @@ print(run['grid_dims'] ,  run['goal_location'])
 run['seed'] = 6000
 
 #------------Training Loop Controls-----------
-run['n_episodes'] = 4000
+run['n_episodes'] = 2000
 run['max_steps'] = 30
 
 #-----------Q_Policy Control---------
-run['gamma'] = 0.3             #discount factor 0.9
-run['lr'] = 0.1                 #learning rate 0.1
+run['gamma'] = 0.83          #discount factor 0.9
+run['lr'] = 0.3                 #learning rate 0.1
 
 #-----------Random Policy Control---------------
 run['max_epsilon'] = 1              #initialize the exploration probability to 1
-run['epsilon_decay'] = 0.001        #exploration decreasing decay for exponential decreasing
+run['epsilon_decay'] = 0.01        #exploration decreasing decay for exponential decreasing
 run['min_epsilon'] = 0.001
 
 #-------------Analytic Policy Control---------------
@@ -59,7 +62,9 @@ run['analytic_policy_update_frequency'] = 500
 run['random_endpoints'] = False
 run['reward_endpoints'] = True
 run['analytic_policy_active'] = True
-run['analytic_policy_chance'] = 0.7
+run['analytic_policy_chance'] = 0.3
+
+run['q_visuals'] = False
 
 #-------------Visualization Controls------------------
 sns.set(style='darkgrid')
@@ -155,6 +160,9 @@ for m in [True,False]:
 
     reward_per_episode = []
 
+    an_policy = {}
+    q_policy = {}
+
 
     for e in range(n_episodes):
         #------------Reset Environment--------------
@@ -162,10 +170,12 @@ for m in [True,False]:
         done = False
         episode_reward = 0
         
+        
         prev_run = []
         prev_first = 0
         prev_last = 0
         
+
         #------------------------------------------------
         #----------DETERMINE DOMINANT POLICY-------------
         #------------------------------------------------
@@ -179,8 +189,12 @@ for m in [True,False]:
             #If analytic policy applies, apply it
             #print("Using analytic policy")
             
-            A_policy_status['action_dominant'] = True     
-
+            A_policy_status['action_dominant'] = True
+            analytic_policy_chance=analytic_policy_chance-0.001
+                 
+            # print(e,"episode number")
+            # print(analytic_policy_chance)
+            # input("enter")
         else:
             #-----------Chance of Random Policy--------------
             if np.random.uniform(0,1) < epsilon:
@@ -268,7 +282,10 @@ for m in [True,False]:
         #------------------------------------------------------
         #Update reward record
         reward_per_episode.append(episode_reward) 
-        
+        if A_policy_status['action_dominant']==True:
+            an_policy[e]=episode_reward
+        if Q_policy_status['action_dominant']==True:
+            q_policy[e]=episode_reward            
         #Decrease epsilon
         epsilon = max(min_epsilon, np.exp(-epsilon_decay*e))
         #print("epsilon", epsilon)
@@ -300,20 +317,23 @@ for m in [True,False]:
             if len(Analytic_policy.learned_info) > 0:
                 Analytic_policy.update_policy(run)
             
-            
-            
+    
         
 
     #----------------------------------------
     #-----------End of Training Actions------
     #----------------------------------------
     running_avg = []
-    window = 50
+    window = 1
     for point in range(window, len(reward_per_episode)):
         running_avg.append(np.mean(reward_per_episode[point-window: point]))
             
-    plt.plot(running_avg)
-plt.legend(["With Analytical Crossover","Regular Q"])
+    #plt.plot(running_avg[1000:1250])
+    #plt.scatter(list(an_policy),list(an_policy.values()))
+    plt.scatter(list(q_policy),list(q_policy.values()))
+    plt.legend(["Analytical Crossover","Regular Q"])
+    plt.show()
+    
 plt.title("Rewards vs Episode")
 plt.savefig(os.path.join('output_images','rewards' +"croosover"+'.png'))
 plt.show()        

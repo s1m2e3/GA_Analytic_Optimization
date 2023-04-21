@@ -65,7 +65,7 @@ class Random_Policy:
             self.seed = seed
             random.seed(seed)
             np.random.seed(seed)
-            env.action_space.np_random.seed(seed) 
+            # env.action_space.np_random.seed(seed) 
             print("initializing random policy")
         
         def get_action(self, state):
